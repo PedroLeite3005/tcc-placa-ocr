@@ -1,0 +1,8 @@
+opencv-python
+torch
+torchvision
+Pillow
+pytorch-lightning
+timm
+nltk
+numpy
