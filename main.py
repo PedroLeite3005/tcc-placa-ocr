@@ -17,7 +17,7 @@ _DATA_ROOTS = {
 
 _DATASETS = ["rodosol", "bj7"]
 # "svtr","parseq","crnn"
-_MODELS = ["parseq"]
+_MODELS = ["crnn"]
 
 def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""
@@ -59,7 +59,7 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     # já sabe reconhecer texto em geral e só aprende o domínio das placas.
     # Se False, a arquitetura é instanciada com pesos aleatórios (treino do zero),
     # o que dá uma comparação mais justa com o SVTR, que não é pré-treinado.
-    parseq_pretrained = False  # Carrega pesos pré-treinados do PARSeq.
+    parseq_pretrained = True  # Carrega pesos pré-treinados do PARSeq.
     parseq_decode_ar = True  # Usa decodificação autoregressiva no PARSeq.
     parseq_refine_iters = 1  # Número de iterações de refinamento no PARSeq.
 
