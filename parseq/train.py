@@ -31,7 +31,7 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> floa
     for imgs, labels in loader:
         imgs = imgs.to(device)
         preds = predict_strings(model, imgs)
-        targets = [lbl.upper() for lbl in labels]
+        targets = [lbl.lower() for lbl in labels]
         correct += sum(p == t for p, t in zip(preds, targets))
         total += len(targets)
     return correct / total if total else 0.0
@@ -114,8 +114,10 @@ def run_parseq(p: SimpleNamespace) -> None:
     if log_path:
         log_path.write_text("epoch,train_loss,val_acc\n", encoding="utf-8")
 
-    best_acc = 0.0
-    patience_counter = 0
+    best_acc = -1.0
+    lr_bad_epochs = 0
+    stop_bad_epochs = 0
+    lr_was_reduced = False
 
     for epoch in range(1, p.epochs + 1):
         model.train()
@@ -123,7 +125,7 @@ def run_parseq(p: SimpleNamespace) -> None:
 
         for imgs, labels in train_loader:
             imgs = imgs.to(device)
-            labels = [lbl.upper() for lbl in labels]
+            labels = [lbl.lower() for lbl in labels]
 
             _, loss, _ = model.forward_logits_loss(imgs, labels)
 
@@ -149,16 +151,37 @@ def run_parseq(p: SimpleNamespace) -> None:
 
         if val_acc > best_acc:
             best_acc = val_acc
-            patience_counter = 0
+            lr_bad_epochs = 0
+            stop_bad_epochs = 0
             torch.save(model.state_dict(), ckpt_path)
-        else:
-            patience_counter += 1
-            if patience_counter >= p.early_stop_patience:
-                print(
-                    f"Early stop na época {epoch}. "
-                    f"Melhor val_acc: {best_acc:.4f}"
-                )
-                break
+        elif epoch >= p.min_epochs:
+            if not lr_was_reduced:
+                lr_bad_epochs += 1
+                if lr_bad_epochs >= p.lr_patience:
+                    for g in optimizer.param_groups:
+                        g["lr"] *= p.lr_factor
+                    new_lr = optimizer.param_groups[0]["lr"]
+                    print(
+                        f"Agendador: lr reduzido para {new_lr:.2e} na época {epoch}."
+                    )
+                    lr_was_reduced = True
+                    lr_bad_epochs = 0
+                    stop_bad_epochs = 0
+            else:
+                stop_bad_epochs += 1
+                if stop_bad_epochs >= p.early_stop_patience:
+                    print(
+                        f"Early stop na época {epoch}. "
+                        f"Melhor val_acc: {best_acc:.4f}"
+                    )
+                    break
+
+    if not ckpt_path.exists():
+        print(
+            f"Aviso: nenhum checkpoint 'best' foi salvo (best_acc={best_acc:.4f}). "
+            f"Usando estado final do modelo para avaliação."
+        )
+        torch.save(model.state_dict(), ckpt_path)
 
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     test_acc = evaluate(model, test_loader, device)

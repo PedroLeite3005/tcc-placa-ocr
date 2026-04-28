@@ -16,8 +16,8 @@ _DATA_ROOTS = {
 }
 
 _DATASETS = ["rodosol", "bj7"]
-_MODELS = ["svtr", "parseq"]
-
+# "svtr","parseq","crnn"
+_MODELS = ["parseq"]
 
 def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""
@@ -31,13 +31,16 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     # treino
     seed = 42  # Semente para reprodutibilidade de treino.
     batch_size = 64  # Quantidade de amostras por batch.
-    epochs = 5  # Número máximo de épocas de treino.
+    epochs = 30  # Número máximo de épocas de treino.
     learning_rate = 0.0005  # Taxa de aprendizado do otimizador.
     write_txt = True  # Se True, grava histórico de treino em arquivo .txt.
     device = "cuda"  # Dispositivo alvo de execução: cuda | mps | cpu.
     resume: Path | None = None  # Checkpoint para retomar treino, ou None para iniciar do zero.
     eval_only = False  # Se True, apenas avalia sem treinar.
-    early_stop_patience = 2  # Quantas épocas sem melhora antes de parar cedo.
+    early_stop_patience = 3  # Quantas épocas sem melhora antes de parar cedo (após o agendador agir).
+    min_epochs = 10  # Épocas mínimas de warmup antes de qualquer intervenção automática.
+    lr_patience = 3  # Épocas sem melhora (após warmup) para o agendador reduzir o lr.
+    lr_factor = 0.1  # Fator aplicado ao lr quando o agendador disparar (uma única vez).
     num_workers = 4  # Processos paralelos para carregamento de dados.
 
     # YOLO (ignorados se model != yolo)
@@ -50,7 +53,13 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     warp_h = 64  # Altura do crop normalizado para OCR (SVTR).
 
     # PARSeq
-    parseq_pretrained = True  # Carrega pesos pré-treinados do PARSeq.
+    # parseq_pretrained=True baixa pesos do PARSeq já treinados pelo autor em
+    # grandes bases de scene-text (MJSynth, SynthText, COCO-Text, TextOCR, etc.)
+    # via torch.hub ("baudm/parseq"). O treino aqui vira fine-tuning: o modelo
+    # já sabe reconhecer texto em geral e só aprende o domínio das placas.
+    # Se False, a arquitetura é instanciada com pesos aleatórios (treino do zero),
+    # o que dá uma comparação mais justa com o SVTR, que não é pré-treinado.
+    parseq_pretrained = False  # Carrega pesos pré-treinados do PARSeq.
     parseq_decode_ar = True  # Usa decodificação autoregressiva no PARSeq.
     parseq_refine_iters = 1  # Número de iterações de refinamento no PARSeq.
 
@@ -70,6 +79,9 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
         resume=resume,
         eval_only=eval_only,
         early_stop_patience=early_stop_patience,
+        min_epochs=min_epochs,
+        lr_patience=lr_patience,
+        lr_factor=lr_factor,
         num_workers=num_workers,
         imgsz=imgsz,
         conf=conf,
@@ -90,6 +102,9 @@ def executar_run(p: SimpleNamespace) -> None:
     elif p.model == "parseq":
         from parseq.train import run_parseq
         run_parseq(p)
+    elif p.model == "crnn":
+        from crnn.train import run_crnn
+        run_crnn(p)
     else:
         raise NotImplementedError(f"Modelo não implementado: {p.model!r}")
 
