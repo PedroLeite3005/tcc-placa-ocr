@@ -12,10 +12,36 @@ from torchvision import transforms
 
 
 def make_transform(w: int = 128, h: int = 32) -> transforms.Compose:
-    """Transformação padrão para entrada do PARSeq."""
+    """Transformação padrão para entrada do PARSeq (val/test)."""
     return transforms.Compose(
         [
             transforms.Resize((h, w)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225],
+            ),
+        ]
+    )
+
+
+def make_transform_train(w: int = 128, h: int = 32) -> transforms.Compose:
+    """Transformação de treino com augmentations leves para placas."""
+    return transforms.Compose(
+        [
+            transforms.Resize((h, w)),
+            transforms.ColorJitter(
+                brightness=0.3,
+                contrast=0.3,
+                saturation=0.2,
+            ),
+            transforms.RandomAffine(
+                degrees=2,
+                translate=(0.02, 0.05),
+                scale=(0.95, 1.05),
+                fill=0,
+            ),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5)),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406],
@@ -76,6 +102,7 @@ class BJ7Dataset(Dataset):
     ) -> None:
         self.transform = transform or make_transform()
         self.samples: list[tuple[Path, str]] = []
+        self.metadata: list[dict] = []
 
         with open(split_path, encoding="utf-8") as f:
             for line in f:
@@ -101,11 +128,19 @@ class BJ7Dataset(Dataset):
                     continue
 
                 ext = ".png" if (track_dir / "hr-001.png").exists() else ".jpg"
+                track_id = track_dir.name
                 for prefix in ("hr", "lr"):
                     for i in range(1, 6):
                         img_path = track_dir / f"{prefix}-{i:03d}{ext}"
                         if img_path.exists():
                             self.samples.append((img_path, plate))
+                            self.metadata.append(
+                                {
+                                    "track_id": track_id,
+                                    "image_type": prefix,
+                                    "image_idx": i,
+                                }
+                            )
 
     def __len__(self) -> int:
         return len(self.samples)

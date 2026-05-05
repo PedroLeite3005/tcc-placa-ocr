@@ -50,6 +50,33 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> floa
     return correct / total if total else 0.0
 
 
+@torch.no_grad()
+def dump_test_predictions(
+    model: nn.Module,
+    loader: DataLoader,
+    ds_test,
+    device: torch.device,
+    out_path: Path,
+) -> None:
+    """Salva CSV com track_id, image_type, image_idx, gt, pred do test set BJ7."""
+    model.eval()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    idx = 0
+    with open(out_path, "w", encoding="utf-8", newline="") as f:
+        f.write("track_id,image_type,image_idx,gt,pred\n")
+        for imgs, labels in loader:
+            imgs = imgs.to(device)
+            preds = greedy_decode(model(imgs).cpu())
+            targets = [decode(lbl.tolist()) for lbl in labels]
+            for pred, gt in zip(preds, targets):
+                meta = ds_test.metadata[idx]
+                f.write(
+                    f"{meta['track_id']},{meta['image_type']},"
+                    f"{meta['image_idx']},{gt.upper()},{pred.upper()}\n"
+                )
+                idx += 1
+
+
 # ---------------------------------------------------------------------------
 # Resolução do dispositivo
 # ---------------------------------------------------------------------------
@@ -236,3 +263,8 @@ def run_svtr(p: SimpleNamespace) -> None:
     if log_path:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"test_acc,{test_acc:.6f}\n")
+
+    if p.dataset == "bj7":
+        preds_csv = Path(p.out_dir) / f"{p.run_name}_preds.csv"
+        dump_test_predictions(model, test_loader, ds_test, device, preds_csv)
+        print(f"Predições do teste salvas em: {preds_csv}")

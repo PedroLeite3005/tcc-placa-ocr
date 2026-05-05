@@ -1,0 +1,16 @@
+================================================================================
+BJ7 - Fusao por track (voto majoritario)
+================================================================================
+
+Acuracia de sequencia (1 predicao por track)
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+svtr     |   0.9565  |   0.6168  |  4000
+crnn     |   0.9605  |   0.6125  |  4000
+parseq   |   0.9313  |   0.5580  |  4000
+
+Fusao inter-modelos (1 voto por modelo, voto combinado HR+LR):
+  Acuracia por track: 0.9660 (4000 tracks em comum)
+
+================================================================================

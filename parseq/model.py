@@ -7,14 +7,19 @@ import torch
 
 def load_parseq(
     *,
+    variant: str = "parseq",
     pretrained: bool = True,
     decode_ar: bool = True,
     refine_iters: int = 1,
 ) -> torch.nn.Module:
-    """Carrega PARSeq via Torch Hub sem prompt interativo de confiança."""
+    """Carrega PARSeq via Torch Hub sem prompt interativo de confiança.
+
+    variant: nome do entrypoint no hub baudm/parseq.
+    Opções: 'parseq' (base, ~24M) ou 'parseq_tiny' (~6M).
+    """
     return torch.hub.load(
         "baudm/parseq",
-        "parseq",
+        variant,
         pretrained=pretrained,
         decode_ar=decode_ar,
         refine_iters=refine_iters,

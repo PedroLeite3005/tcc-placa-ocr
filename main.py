@@ -15,9 +15,9 @@ _DATA_ROOTS = {
     "bj7": Path("bj7"),
 }
 
-_DATASETS = ["rodosol", "bj7"]
+_DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
-_MODELS = ["crnn"]
+_MODELS = ["svtr"]
 
 def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""
@@ -28,7 +28,7 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     data_root = _DATA_ROOTS[dataset]  # Diretório base do dataset selecionado.
     split_path: Path | None = None   # Arquivo de split; None usa data_root/split.txt.
 
-    # treino
+    # treino — defaults usados por CRNN e SVTR
     seed = 42  # Semente para reprodutibilidade de treino.
     batch_size = 64  # Quantidade de amostras por batch.
     epochs = 30  # Número máximo de épocas de treino.
@@ -42,6 +42,14 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     lr_patience = 3  # Épocas sem melhora (após warmup) para o agendador reduzir o lr.
     lr_factor = 0.1  # Fator aplicado ao lr quando o agendador disparar (uma única vez).
     num_workers = 4  # Processos paralelos para carregamento de dados.
+
+    # Overrides do PARSeq (treino from-scratch precisa de schedule mais longo)
+    if model == "parseq":
+        epochs = 100
+        early_stop_patience = 15
+        min_epochs = 30
+        lr_patience = 10
+        lr_factor = 0.3
 
     # YOLO (ignorados se model != yolo)
     imgsz = 640  # Tamanho de entrada para detector YOLO (se usado).
@@ -59,7 +67,8 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     # já sabe reconhecer texto em geral e só aprende o domínio das placas.
     # Se False, a arquitetura é instanciada com pesos aleatórios (treino do zero),
     # o que dá uma comparação mais justa com o SVTR, que não é pré-treinado.
-    parseq_pretrained = True  # Carrega pesos pré-treinados do PARSeq.
+    parseq_variant = "parseq_tiny"  # Variante: 'parseq' (~24M) ou 'parseq_tiny' (~6M).
+    parseq_pretrained = False  # Carrega pesos pré-treinados do PARSeq.
     parseq_decode_ar = True  # Usa decodificação autoregressiva no PARSeq.
     parseq_refine_iters = 1  # Número de iterações de refinamento no PARSeq.
 
@@ -88,6 +97,7 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
         iou=iou,
         warp_w=warp_w,
         warp_h=warp_h,
+        parseq_variant=parseq_variant,
         parseq_pretrained=parseq_pretrained,
         parseq_decode_ar=parseq_decode_ar,
         parseq_refine_iters=parseq_refine_iters,
@@ -130,6 +140,18 @@ def main() -> None:
     for run_name, ok, message in results:
         status = "OK" if ok else "ERRO"
         print(f"- {run_name}: {status} | {message}")
+
+    if "bj7" in _DATASETS:
+        print("\n=== Fusão BJ7 ===")
+        from fusion import run_fusion
+        # Procura CSVs de TODOS os modelos possíveis (não só os que rodaram agora),
+        # para que rodar 1 modelo por vez ainda atualize a tabela com os outros.
+        all_known_models = ["svtr", "crnn", "parseq"]
+        run_fusion(
+            models=all_known_models,
+            dataset_name="bj7",
+            logs_dir=Path("logs"),
+        )
 
 
 if __name__ == "__main__":

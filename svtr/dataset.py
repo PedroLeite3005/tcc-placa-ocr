@@ -107,6 +107,7 @@ class BJ7Dataset(Dataset):
     ) -> None:
         self.transform = transform or make_transform()
         self.samples: list[tuple[Path, str]] = []
+        self.metadata: list[dict] = []
 
         with open(split_path) as f:
             for line in f:
@@ -135,11 +136,19 @@ class BJ7Dataset(Dataset):
                 # Detecta extensão (Scenario-A → PNG, Scenario-B → JPG)
                 ext = ".png" if (track_dir / "hr-001.png").exists() else ".jpg"
 
+                track_id = track_dir.name
                 for prefix in ("hr", "lr"):
                     for i in range(1, 6):
                         img_path = track_dir / f"{prefix}-{i:03d}{ext}"
                         if img_path.exists():
                             self.samples.append((img_path, plate))
+                            self.metadata.append(
+                                {
+                                    "track_id": track_id,
+                                    "image_type": prefix,
+                                    "image_idx": i,
+                                }
+                            )
 
     def __len__(self) -> int:
         return len(self.samples)
