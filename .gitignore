@@ -12,6 +12,7 @@ env/
 
 # Datasets (não versionar)
 bj7/
+bj7_old/
 rodosol/
 
 # Checkpoints (pesados) — manter só logs em texto se quiser versionar

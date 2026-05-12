@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,7 +18,18 @@ from .dataset import (
     make_transform,
     make_transform_train,
 )
-from .model import load_parseq, predict_strings
+from .model import load_parseq, predict_strings, predict_strings_with_conf
+
+
+def _format_conf(conf_chars: list[float]) -> tuple[float, str]:
+    """Calcula conf_seq (média geométrica) e formata conf_chars como 'p1|p2|...'."""
+    if not conf_chars:
+        return 0.0, ""
+    eps = 1e-12
+    log_sum = sum(math.log(max(p, eps)) for p in conf_chars)
+    conf_seq = math.exp(log_sum / len(conf_chars))
+    conf_str = "|".join(f"{p:.4f}" for p in conf_chars)
+    return conf_seq, conf_str
 
 
 def _resolve_device(requested: str) -> torch.device:
@@ -38,21 +50,23 @@ def dump_test_predictions(
     device: torch.device,
     out_path: Path,
 ) -> None:
-    """Salva CSV com track_id, image_type, image_idx, gt, pred do test set BJ7."""
+    """Salva CSV com track_id, image_type, image_idx, gt, pred, conf_seq, conf_chars."""
     model.eval()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     idx = 0
     with open(out_path, "w", encoding="utf-8", newline="") as f:
-        f.write("track_id,image_type,image_idx,gt,pred\n")
+        f.write("track_id,image_type,image_idx,gt,pred,conf_seq,conf_chars\n")
         for imgs, labels in loader:
             imgs = imgs.to(device)
-            preds = predict_strings(model, imgs)
+            preds, confs = predict_strings_with_conf(model, imgs)
             targets = [lbl.lower() for lbl in labels]
-            for pred, gt in zip(preds, targets):
+            for pred, gt, conf_chars in zip(preds, targets, confs):
                 meta = ds_test.metadata[idx]
+                conf_seq, conf_str = _format_conf(conf_chars)
                 f.write(
                     f"{meta['track_id']},{meta['image_type']},"
-                    f"{meta['image_idx']},{gt.upper()},{pred.upper()}\n"
+                    f"{meta['image_idx']},{gt.upper()},{pred.upper()},"
+                    f"{conf_seq:.6f},{conf_str}\n"
                 )
                 idx += 1
 
@@ -176,6 +190,10 @@ def run_parseq(p: SimpleNamespace) -> None:
         print(
             f"Teste — seq_acc: {seq_acc:.4f} | char_acc: {char_acc:.4f}"
         )
+        if p.dataset == "bj7":
+            preds_csv = Path(p.out_dir) / f"{p.run_name}_preds.csv"
+            dump_test_predictions(model, test_loader, ds_test, device, preds_csv)
+            print(f"Predições do teste salvas em: {preds_csv}")
         return
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=p.learning_rate)

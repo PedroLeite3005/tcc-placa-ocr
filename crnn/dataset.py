@@ -17,6 +17,11 @@ IDX2CHAR = {i + 1: c for i, c in enumerate(CHARS)}
 NUM_CLASSES = len(CHARS) + 1  # 37 (inclui blank)
 
 
+def _sanitize_plate(text: str) -> str:
+    """Normaliza placa: uppercase + mantém só alfanuméricos (sem espaços/hifens)."""
+    return "".join(c for c in text.upper() if c.isalnum())
+
+
 def encode(plate: str) -> list[int]:
     return [CHAR2IDX[c] for c in plate.upper() if c in CHAR2IDX]
 
@@ -127,7 +132,7 @@ class BJ7Dataset(Dataset):
                 try:
                     with open(ann_path) as f2:
                         ann = json.load(f2)
-                    plate = ann.get("plate_text", "").upper()
+                    plate = _sanitize_plate(ann.get("plate_text", ""))
                     if not plate:
                         continue
                 except Exception:
@@ -167,7 +172,7 @@ def _read_plate_rodosol(txt_path: Path) -> str | None:
             for line in f:
                 key, _, val = line.partition(":")
                 if key.strip() == "plate":
-                    return val.strip().upper()
+                    return _sanitize_plate(val) or None
     except Exception:
         pass
     return None

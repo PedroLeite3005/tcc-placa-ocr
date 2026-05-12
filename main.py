@@ -7,6 +7,7 @@ Parâmetros do experimento: edite em obter_parametros().
 
 from __future__ import annotations
 
+import traceback
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,7 +18,7 @@ _DATA_ROOTS = {
 
 _DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
-_MODELS = ["svtr"]
+_MODELS = [ "parseq"]
 
 def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""
@@ -42,14 +43,6 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     lr_patience = 3  # Épocas sem melhora (após warmup) para o agendador reduzir o lr.
     lr_factor = 0.1  # Fator aplicado ao lr quando o agendador disparar (uma única vez).
     num_workers = 4  # Processos paralelos para carregamento de dados.
-
-    # Overrides do PARSeq (treino from-scratch precisa de schedule mais longo)
-    if model == "parseq":
-        epochs = 100
-        early_stop_patience = 15
-        min_epochs = 30
-        lr_patience = 10
-        lr_factor = 0.3
 
     # YOLO (ignorados se model != yolo)
     imgsz = 640  # Tamanho de entrada para detector YOLO (se usado).
@@ -132,9 +125,13 @@ def main() -> None:
                 results.append((p.run_name, True, "ok"))
                 print(f"=== FIM {p.run_name} (OK) ===")
             except Exception as exc:
-                results.append((p.run_name, False, str(exc)))
+                tb = traceback.format_exc()
+                motivo = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
+                results.append((p.run_name, False, motivo))
                 print(f"=== FIM {p.run_name} (ERRO) ===")
-                print(f"Motivo: {exc}")
+                print(f"Motivo: {motivo}")
+                print("Traceback:")
+                print(tb)
 
     print("\nResumo final:")
     for run_name, ok, message in results:

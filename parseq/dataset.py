@@ -11,6 +11,15 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 
+def _sanitize_plate(text: str) -> str:
+    """Normaliza placa: uppercase + remove tudo que não é alfanumérico.
+
+    Cobre espaços, hífens, quebras de linha, e qualquer outro lixo do JSON
+    que quebraria o tokenizer do PARSeq (KeyError no vocabulário).
+    """
+    return "".join(c for c in text.upper() if c.isalnum())
+
+
 def make_transform(w: int = 128, h: int = 32) -> transforms.Compose:
     """Transformação padrão para entrada do PARSeq (val/test)."""
     return transforms.Compose(
@@ -121,7 +130,7 @@ class BJ7Dataset(Dataset):
                 try:
                     with open(ann_path, encoding="utf-8") as f2:
                         ann = json.load(f2)
-                    plate = ann.get("plate_text", "").upper()
+                    plate = _sanitize_plate(ann.get("plate_text", ""))
                     if not plate:
                         continue
                 except Exception:
@@ -158,7 +167,7 @@ def _read_plate_rodosol(txt_path: Path) -> str | None:
             for line in f:
                 key, _, val = line.partition(":")
                 if key.strip() == "plate":
-                    return val.strip().upper()
+                    return _sanitize_plate(val) or None
     except Exception:
         pass
     return None

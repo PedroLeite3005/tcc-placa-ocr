@@ -36,3 +36,18 @@ def predict_strings(model: torch.nn.Module, images: torch.Tensor) -> list[str]:
     labels, _ = model.tokenizer.decode(probs)
     return labels
 
+
+@torch.no_grad()
+def predict_strings_with_conf(
+    model: torch.nn.Module, images: torch.Tensor
+) -> tuple[list[str], list[list[float]]]:
+    """Retorna (labels, conf_chars) — uma lista de probs por caractere predito."""
+    logits = model(images)
+    probs = logits.softmax(-1)
+    labels, batch_probs = model.tokenizer.decode(probs)
+    confs: list[list[float]] = []
+    for label, p in zip(labels, batch_probs):
+        # batch_probs[i] já vem filtrado pelo decoder; cortar para alinhar com o label.
+        confs.append([float(x) for x in p.tolist()[: len(label)]])
+    return labels, confs
+

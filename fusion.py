@@ -2,43 +2,58 @@
 
 Lê os CSVs de predições gerados por cada modelo (crnn/svtr/parseq) ao final
 do treino e produz uma tabela TXT com:
-  - Acurácia HR fundida (voto majoritário entre as 5 imagens HR de cada track).
-  - Acurácia LR fundida (voto majoritário entre as 5 imagens LR de cada track).
-  - Acurácia da fusão entre modelos (1 voto por modelo, baseado no voto
-    combinado HR+LR de cada modelo).
+  - Acurácia HR fundida (voto ponderado por confiança entre as 5 imagens HR de cada track).
+  - Acurácia LR fundida (voto ponderado por confiança entre as 5 imagens LR de cada track).
+  - Acurácia da fusão entre modelos (1 voto ponderado por modelo, peso = soma de
+    confianças do voto combinado HR+LR).
 
-Cada CSV deve ter colunas: track_id, image_type, image_idx, gt, pred.
+Cada CSV deve ter colunas:
+  track_id, image_type, image_idx, gt, pred, conf_seq, conf_chars
 """
 
 from __future__ import annotations
 
 import csv
-from collections import Counter
 from pathlib import Path
 
 
-def majority_vote(preds: list[str]) -> str:
-    """Retorna a string mais votada. Em caso de empate, vence a primeira ocorrência.
+def weighted_vote(
+    preds_with_weights: list[tuple[str, float]],
+) -> tuple[str, float]:
+    """Soma pesos por string e retorna (string vencedora, soma_de_pesos_da_vencedora).
 
-    Counter.most_common é estável quanto à ordem de inserção em Python 3.7+.
-    Se ['bbb7777', 'eee7777', 'bbb7777', 'eee7777', 'bbb7777'] entra,
-    a saída é 'bbb7777' (3 votos contra 2).
+    Em caso de empate na soma de pesos (raro com floats), `max` mantém a primeira
+    inserção, equivalente ao "primeira ocorrência ganha".
     """
-    if not preds:
-        return ""
-    counter = Counter(preds)
-    return counter.most_common(1)[0][0]
+    if not preds_with_weights:
+        return "", 0.0
+    totals: dict[str, float] = {}
+    for s, w in preds_with_weights:
+        totals[s] = totals.get(s, 0.0) + float(w)
+    winner = max(totals.items(), key=lambda kv: kv[1])
+    return winner[0], winner[1]
 
 
 def load_preds_csv(path: Path) -> dict[str, dict]:
     """Lê CSV e agrupa por track_id.
 
-    Retorna dict: {track_id: {"gt": str, "hr": [str, ...], "lr": [str, ...]}}
+    Retorna dict: {track_id: {"gt": str,
+                              "hr": [(pred, conf_seq), ...],
+                              "lr": [(pred, conf_seq), ...],
+                              "hr_chars": [str, ...],
+                              "lr_chars": [str, ...]}}
     As listas hr/lr preservam a ordem das imagens (image_idx 1..5).
+
+    Levanta ValueError se o CSV não tiver a coluna 'conf_seq' (formato antigo).
     """
     by_track: dict[str, dict] = {}
     with open(path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
+        if reader.fieldnames is None or "conf_seq" not in reader.fieldnames:
+            raise ValueError(
+                f"CSV {path} esta em formato antigo (sem coluna 'conf_seq'). "
+                f"Apague o arquivo e regere com a versao atual de dump_test_predictions."
+            )
         rows = list(reader)
 
     rows.sort(key=lambda r: (r["track_id"], r["image_type"], int(r["image_idx"])))
@@ -46,13 +61,26 @@ def load_preds_csv(path: Path) -> dict[str, dict]:
     for row in rows:
         tid = row["track_id"]
         if tid not in by_track:
-            by_track[tid] = {"gt": row["gt"], "hr": [], "lr": []}
-        by_track[tid][row["image_type"]].append(row["pred"])
+            by_track[tid] = {
+                "gt": row["gt"],
+                "hr": [],
+                "lr": [],
+                "hr_chars": [],
+                "lr_chars": [],
+            }
+        try:
+            conf_seq = float(row.get("conf_seq", "0") or "0")
+        except ValueError:
+            conf_seq = 0.0
+        by_track[tid][row["image_type"]].append((row["pred"], conf_seq))
+        by_track[tid][f"{row['image_type']}_chars"].append(
+            row.get("conf_chars", "") or ""
+        )
     return by_track
 
 
 def compute_intra_model(preds_by_track: dict[str, dict]) -> dict[str, float]:
-    """Calcula acurácia HR-fundida e LR-fundida sobre os tracks."""
+    """Calcula acurácia HR-fundida e LR-fundida (voto ponderado por conf_seq)."""
     n = len(preds_by_track)
     if n == 0:
         return {"hr_fusion_acc": 0.0, "lr_fusion_acc": 0.0, "n_tracks": 0}
@@ -62,9 +90,11 @@ def compute_intra_model(preds_by_track: dict[str, dict]) -> dict[str, float]:
     for data in preds_by_track.values():
         gt = data["gt"]
         if data["hr"]:
-            hr_correct += int(majority_vote(data["hr"]) == gt)
+            winner, _ = weighted_vote(data["hr"])
+            hr_correct += int(winner == gt)
         if data["lr"]:
-            lr_correct += int(majority_vote(data["lr"]) == gt)
+            winner, _ = weighted_vote(data["lr"])
+            lr_correct += int(winner == gt)
 
     return {
         "hr_fusion_acc": hr_correct / n,
@@ -73,19 +103,26 @@ def compute_intra_model(preds_by_track: dict[str, dict]) -> dict[str, float]:
     }
 
 
-def _combined_track_pred(data: dict) -> str:
-    """Voto majoritário sobre todas as 10 imagens (HR+LR) de um track."""
-    return majority_vote(list(data["hr"]) + list(data["lr"]))
+def _combined_track_vote(data: dict) -> tuple[str, float]:
+    """Voto ponderado sobre todas as imagens (HR+LR) de um track.
+
+    Retorna (string vencedora, soma de pesos da vencedora).
+    """
+    return weighted_vote(list(data["hr"]) + list(data["lr"]))
 
 
 def compute_inter_model(
     all_models_preds: dict[str, dict[str, dict]],
 ) -> dict[str, float]:
-    """Acurácia da fusão entre modelos (1 voto por modelo, voto combinado HR+LR)."""
+    """Acurácia da fusão entre modelos (1 voto ponderado por modelo).
+
+    Cada modelo gera 1 voto por track via voto ponderado das 10 imagens (HR+LR).
+    O peso desse voto agregado é a soma dos pesos da string vencedora.
+    Os modelos votam (ponderado) entre si com esses pesos.
+    """
     if not all_models_preds:
         return {"inter_model_acc": 0.0, "n_tracks": 0}
 
-    # Interseção dos tracks que todos os modelos avaliaram.
     track_sets = [set(p.keys()) for p in all_models_preds.values()]
     common_tracks = set.intersection(*track_sets) if track_sets else set()
 
@@ -94,14 +131,14 @@ def compute_inter_model(
 
     correct = 0
     for tid in common_tracks:
-        # GT deve ser o mesmo entre modelos; pega do primeiro.
         first_model = next(iter(all_models_preds))
         gt = all_models_preds[first_model][tid]["gt"]
-        votes = [
-            _combined_track_pred(all_models_preds[m][tid])
-            for m in all_models_preds
-        ]
-        correct += int(majority_vote(votes) == gt)
+        votes_with_weights: list[tuple[str, float]] = []
+        for m in all_models_preds:
+            pred, weight = _combined_track_vote(all_models_preds[m][tid])
+            votes_with_weights.append((pred, weight))
+        winner, _ = weighted_vote(votes_with_weights)
+        correct += int(winner == gt)
 
     return {
         "inter_model_acc": correct / len(common_tracks),
@@ -116,10 +153,10 @@ def format_table(
     """Gera o TXT formatado com a tabela de resultados."""
     lines: list[str] = []
     lines.append("=" * 80)
-    lines.append("BJ7 - Fusao por track (voto majoritario)")
+    lines.append("BJ7 - Fusao por track (voto ponderado por confianca)")
     lines.append("=" * 80)
     lines.append("")
-    lines.append("Acuracia de sequencia (1 predicao por track)")
+    lines.append("Acuracia de sequencia (1 predicao por track, voto ponderado por conf_seq)")
     lines.append("")
     lines.append("Modelo   | HR fusion | LR fusion | Tracks")
     lines.append("---------|-----------|-----------|-------")
@@ -132,7 +169,7 @@ def format_table(
 
     if inter["n_tracks"] > 0 and len(intra) >= 2:
         lines.append(
-            "Fusao inter-modelos (1 voto por modelo, voto combinado HR+LR):"
+            "Fusao inter-modelos (1 voto ponderado por modelo, peso = soma de conf_seq):"
         )
         lines.append(
             f"  Acuracia por track: {inter['inter_model_acc']:.4f} "
@@ -153,7 +190,7 @@ def run_fusion(
     dataset_name: str,
     logs_dir: Path,
 ) -> Path | None:
-    """Lê CSVs disponíveis, calcula fusões e escreve a tabela TXT.
+    """Lê CSVs disponíveis, calcula fusões ponderadas e escreve a tabela TXT.
 
     Retorna o caminho do arquivo gerado, ou None se nenhum CSV foi encontrado.
     """
@@ -170,7 +207,11 @@ def run_fusion(
         if not csv_path.exists():
             print(f"[fusion] Aviso: CSV de {model} não encontrado em {csv_path}.")
             continue
-        preds_by_track = load_preds_csv(csv_path)
+        try:
+            preds_by_track = load_preds_csv(csv_path)
+        except ValueError as exc:
+            print(f"[fusion] Aviso: pulando {model} - {exc}")
+            continue
         all_preds[model] = preds_by_track
         intra_results[model] = compute_intra_model(preds_by_track)
         print(
