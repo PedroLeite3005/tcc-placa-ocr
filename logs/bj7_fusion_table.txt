@@ -2,14 +2,26 @@
 BJ7 - Fusao por track (voto ponderado por confianca)
 ================================================================================
 
-Acuracia de sequencia (1 predicao por track, voto ponderado por conf_seq)
+== MV (Voto Majoritario por sequencia, peso = conf_seq) ==
 
 Modelo   | HR fusion | LR fusion | Tracks
 ---------|-----------|-----------|-------
 svtr     |   0.0000  |   0.6627  |  3000
 crnn     |   0.0000  |   0.6337  |  3000
+parseq   |   0.0000  |   0.6827  |  3000
 
-Fusao inter-modelos (1 voto ponderado por modelo, peso = soma de conf_seq):
-  Acuracia por track: 0.6770 (3000 tracks em comum)
+Fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):
+  Acuracia por track: 0.7127 (3000 tracks em comum)
+
+== MVCP (Voto Majoritario por Caractere/Posicao, peso = conf_chars[pos]) ==
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+svtr     |   0.0000  |   0.6937  |  3000
+crnn     |   0.0000  |   0.6673  |  3000
+parseq   |   0.0000  |   0.7043  |  3000
+
+Fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):
+  Acuracia por track: 0.7370 (3000 tracks em comum)
 
 ================================================================================
