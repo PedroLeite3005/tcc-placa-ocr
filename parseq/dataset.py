@@ -20,7 +20,7 @@ def _sanitize_plate(text: str) -> str:
     return "".join(c for c in text.upper() if c.isalnum())
 
 
-def make_transform(w: int = 128, h: int = 32) -> transforms.Compose:
+def make_transform(w: int = 256, h: int = 64) -> transforms.Compose:
     """Transformação padrão para entrada do PARSeq (val/test)."""
     return transforms.Compose(
         [
@@ -34,7 +34,7 @@ def make_transform(w: int = 128, h: int = 32) -> transforms.Compose:
     )
 
 
-def make_transform_train(w: int = 128, h: int = 32) -> transforms.Compose:
+def make_transform_train(w: int = 256, h: int = 64) -> transforms.Compose:
     """Transformação de treino com augmentations leves para placas."""
     return transforms.Compose(
         [

@@ -41,6 +41,30 @@ def make_transform(w: int = 256, h: int = 64) -> transforms.Compose:
     )
 
 
+def make_transform_train(w: int = 256, h: int = 64) -> transforms.Compose:
+    """Transformação de treino com augmentations leves para placas."""
+    return transforms.Compose(
+        [
+            transforms.Resize((h, w)),
+            transforms.ColorJitter(
+                brightness=0.3,
+                contrast=0.3,
+                saturation=0.2,
+            ),
+            transforms.RandomAffine(
+                degrees=2,
+                translate=(0.02, 0.05),
+                scale=(0.95, 1.05),
+                fill=0,
+            ),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ]
+    )
+
+
 class RodoSolDataset(Dataset):
     """Lê crops de placas do RodoSol usando o split.txt.
 

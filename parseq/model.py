@@ -11,11 +11,14 @@ def load_parseq(
     pretrained: bool = True,
     decode_ar: bool = True,
     refine_iters: int = 1,
+    img_size: tuple[int, int] = (64, 256),
 ) -> torch.nn.Module:
     """Carrega PARSeq via Torch Hub sem prompt interativo de confiança.
 
     variant: nome do entrypoint no hub baudm/parseq.
     Opções: 'parseq' (base, ~24M) ou 'parseq_tiny' (~6M).
+    img_size: (h, w) da entrada — alinhado com CRNN/SVTR (256×64) em vez do
+    padrão do hub (128×32), repassado como kwarg de config ao criar o modelo.
     """
     return torch.hub.load(
         "baudm/parseq",
@@ -23,6 +26,7 @@ def load_parseq(
         pretrained=pretrained,
         decode_ar=decode_ar,
         refine_iters=refine_iters,
+        img_size=list(img_size),
         trust_repo=True,
         skip_validation=True,
     )

@@ -11,7 +11,15 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from .dataset import BJ7Dataset, NUM_CLASSES, RodoSolDataset, collate_fn, decode
+from .dataset import (
+    BJ7Dataset,
+    NUM_CLASSES,
+    RodoSolDataset,
+    collate_fn,
+    decode,
+    make_transform,
+    make_transform_train,
+)
 from .model import CRNN
 
 
@@ -146,12 +154,17 @@ def run_crnn(p: SimpleNamespace) -> None:
     data_root = Path(p.data_root)
     split_path = Path(p.split_path) if p.split_path else data_root / "split.txt"
 
+    tf_train = make_transform_train()
+    tf_eval = make_transform()
+
     if p.dataset == "rodosol":
         def make_ds(split: str):
-            return RodoSolDataset(data_root, split_path, split)
+            tf = tf_train if split == "training" else tf_eval
+            return RodoSolDataset(data_root, split_path, split, transform=tf)
     elif p.dataset == "bj7":
         def make_ds(split: str):
-            return BJ7Dataset(data_root, split_path, split)
+            tf = tf_train if split == "training" else tf_eval
+            return BJ7Dataset(data_root, split_path, split, transform=tf)
     else:
         raise ValueError(f"Dataset desconhecido: {p.dataset!r}")
 
