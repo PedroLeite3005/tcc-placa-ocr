@@ -15,6 +15,10 @@ bj7/
 bj7_old/
 rodosol/
 
+# Exceção: split.txt do BJ7 (leve, define os splits train/val/test —
+# necessário na Jetson para montar o dataset de teste sem levar as imagens todas)
+!bj7/split.txt
+
 # Checkpoints (pesados) — manter só logs em texto se quiser versionar
 logs/**/*.pt
 
