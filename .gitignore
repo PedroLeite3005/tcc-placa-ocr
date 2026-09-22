@@ -17,3 +17,6 @@ rodosol/
 
 # Checkpoints (pesados) — manter só logs em texto se quiser versionar
 logs/**/*.pt
+
+# Exceção: checkpoint do CRNN (mais leve) versionado para uso direto na Jetson
+!logs/bj7_crnn/bj7_crnn_best.pt
