@@ -1,11 +1,10 @@
 """Loop de treino e avaliação do CRNN + CTC."""
 
-from __future__ import annotations
-
 import math
 import random
 from pathlib import Path
 from types import SimpleNamespace
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
@@ -23,7 +22,7 @@ from .dataset import (
 from .model import CRNN
 
 
-def greedy_decode(logits: torch.Tensor, blank: int = 0) -> list[str]:
+def greedy_decode(logits: torch.Tensor, blank: int = 0) -> List[str]:
     """Decodifica logits (B, T, C) via greedy CTC."""
     indices = logits.argmax(-1).tolist()
     results = []
@@ -39,15 +38,15 @@ def greedy_decode(logits: torch.Tensor, blank: int = 0) -> list[str]:
 
 def greedy_decode_with_conf(
     logits: torch.Tensor, blank: int = 0
-) -> tuple[list[str], list[list[float]]]:
+) -> Tuple[List[str], List[List[float]]]:
     """Greedy CTC que também retorna a prob do timestep onde cada char foi ativado."""
     probs_full = logits.softmax(-1)
     top_probs, top_ids = probs_full.max(-1)
-    results: list[str] = []
-    confs: list[list[float]] = []
+    results = []  # type: List[str]
+    confs = []  # type: List[List[float]]
     for seq_ids, seq_probs in zip(top_ids.tolist(), top_probs.tolist()):
-        chars: list[int] = []
-        char_probs: list[float] = []
+        chars = []  # type: List[int]
+        char_probs = []  # type: List[float]
         prev = blank
         for idx, p in zip(seq_ids, seq_probs):
             if idx != blank and idx != prev:
@@ -59,7 +58,7 @@ def greedy_decode_with_conf(
     return results, confs
 
 
-def _format_conf(conf_chars: list[float]) -> tuple[float, str]:
+def _format_conf(conf_chars: List[float]) -> Tuple[float, str]:
     """Calcula conf_seq (média geométrica) e formata conf_chars como 'p1|p2|...'."""
     if not conf_chars:
         return 0.0, ""

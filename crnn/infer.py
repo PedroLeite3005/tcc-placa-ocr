@@ -16,10 +16,10 @@ Uso típico (na Jetson, depois de copiar o checkpoint treinado no desktop):
         --out-csv logs/bench_crnn.csv
 """
 
-from __future__ import annotations
-
 import argparse
+import datetime
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data import DataLoader
@@ -42,7 +42,7 @@ from .dataset import (
     make_transform,
 )
 from .model import CRNN
-from .train import _format_conf, dump_test_predictions, greedy_decode_with_conf
+from .train import dump_test_predictions, greedy_decode_with_conf
 
 _CSV_FIELDS = [
     "timestamp", "hardware", "device", "model", "dataset", "split",
@@ -52,7 +52,7 @@ _CSV_FIELDS = [
 ]
 
 
-def _char_acc(preds: list[str], targets: list[str]) -> tuple[int, int]:
+def _char_acc(preds: List[str], targets: List[str]) -> Tuple[int, int]:
     """Acertos posicionais / total de caracteres (mesma lógica do parseq/train.py)."""
     matches = total = 0
     for p, t in zip(preds, targets):
@@ -72,7 +72,7 @@ def load_model(ckpt_path: Path, device: torch.device) -> CRNN:
 
 
 def build_test_dataset(
-    dataset_name: str, data_root: Path, split_path: Path, split: str, limit: int | None
+    dataset_name: str, data_root: Path, split_path: Path, split: str, limit: Optional[int]
 ):
     tf = make_transform()
     if dataset_name == "rodosol":
@@ -187,7 +187,7 @@ def main() -> None:
     )
 
     row = {
-        "timestamp": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
+        "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
         "hardware": hardware,
         "device": str(device),
         "model": "crnn",

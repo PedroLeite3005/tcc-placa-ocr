@@ -11,12 +11,11 @@ dois ambientes hoje porque usa a API de alocação do próprio PyTorch, que
 existe tanto no build de desktop quanto no build CUDA 10.2 da Jetson Nano.
 """
 
-from __future__ import annotations
-
 import csv
 import os
 import time
 from pathlib import Path
+from typing import List, Optional
 
 import torch
 
@@ -72,14 +71,14 @@ def reset_peak_memory(device: torch.device) -> None:
         torch.cuda.reset_peak_memory_stats(device)
 
 
-def gpu_memory_mb(device: torch.device) -> float | None:
+def gpu_memory_mb(device: torch.device) -> Optional[float]:
     """Pico de memória alocada pelo PyTorch no device, em MB (None se não for CUDA)."""
     if device.type != "cuda":
         return None
     return torch.cuda.max_memory_allocated(device) / (1024 ** 2)
 
 
-def append_csv_row(path: Path, row: dict, fieldnames: list[str]) -> None:
+def append_csv_row(path: Path, row: dict, fieldnames: List[str]) -> None:
     """Adiciona uma linha ao CSV de métricas, criando o cabeçalho se necessário."""
     path.parent.mkdir(parents=True, exist_ok=True)
     is_new = not path.exists()

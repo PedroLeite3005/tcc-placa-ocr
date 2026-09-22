@@ -11,13 +11,13 @@ Fluxo para entrada (B, 3, 64, 256):
   permute(1,0,2):  (B,  T=64, 37)
 """
 
-from __future__ import annotations
+from typing import List
 
 import torch
 import torch.nn as nn
 
 
-def _conv_bn_relu(in_ch: int, out_ch: int) -> list[nn.Module]:
+def _conv_bn_relu(in_ch: int, out_ch: int) -> List[nn.Module]:
     return [
         nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
         nn.BatchNorm2d(out_ch),

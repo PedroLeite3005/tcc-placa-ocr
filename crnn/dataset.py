@@ -1,14 +1,18 @@
 """Dataset classes para RodoSol e BJ7."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+
+
+def _strip_prefix(s: str, prefix: str) -> str:
+    """Equivalente a str.removeprefix (Python 3.9+) — Jetson usa Python 3.6."""
+    return s[len(prefix):] if s.startswith(prefix) else s
 
 # Conjunto de caracteres: blank=0, '0'=1 … '9'=10, 'A'=11 … 'Z'=36
 CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -22,11 +26,11 @@ def _sanitize_plate(text: str) -> str:
     return "".join(c for c in text.upper() if c.isalnum())
 
 
-def encode(plate: str) -> list[int]:
+def encode(plate: str) -> List[int]:
     return [CHAR2IDX[c] for c in plate.upper() if c in CHAR2IDX]
 
 
-def decode(indices: list[int]) -> str:
+def decode(indices: List[int]) -> str:
     return "".join(IDX2CHAR[i] for i in indices if i in IDX2CHAR)
 
 
@@ -82,7 +86,7 @@ class RodoSolDataset(Dataset):
         transform=None,
     ) -> None:
         self.transform = transform or make_transform()
-        self.samples: list[tuple[Path, str]] = []
+        self.samples = []  # type: List[Tuple[Path, str]]
 
         with open(split_path) as f:
             for line in f:
@@ -94,7 +98,7 @@ class RodoSolDataset(Dataset):
                     continue
 
                 # rel: ./images/cars-br/img_000003.jpg
-                parts = Path(rel.removeprefix("./"))  # images/cars-br/img_000003.jpg
+                parts = Path(_strip_prefix(rel, "./"))  # images/cars-br/img_000003.jpg
                 category = parts.parts[1]             # cars-br
                 stem = parts.stem                     # img_000003
 
@@ -135,8 +139,8 @@ class BJ7Dataset(Dataset):
         transform=None,
     ) -> None:
         self.transform = transform or make_transform()
-        self.samples: list[tuple[Path, str]] = []
-        self.metadata: list[dict] = []
+        self.samples = []  # type: List[Tuple[Path, str]]
+        self.metadata = []  # type: List[dict]
 
         with open(split_path) as f:
             for line in f:
@@ -148,7 +152,7 @@ class BJ7Dataset(Dataset):
                     continue
 
                 # rel: ./Scenario-A/Brazilian/track_01384
-                track_dir = data_root / rel.removeprefix("./")
+                track_dir = data_root / _strip_prefix(rel, "./")
                 ann_path = track_dir / "annotations.json"
                 if not ann_path.exists():
                     continue
@@ -190,7 +194,7 @@ class BJ7Dataset(Dataset):
         return img, label
 
 
-def _read_plate_rodosol(txt_path: Path) -> str | None:
+def _read_plate_rodosol(txt_path: Path) -> Optional[str]:
     try:
         with open(txt_path) as f:
             for line in f:
