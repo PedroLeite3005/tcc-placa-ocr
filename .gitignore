@@ -19,10 +19,5 @@ rodosol/
 # necessário na Jetson para montar o dataset de teste sem levar as imagens todas)
 !bj7/split.txt
 
-# Checkpoints (pesados) — manter só logs em texto se quiser versionar
+# Checkpoints (pesados) — nunca versionar; transferir via rsync/scp (ver sync_jetson.sh)
 logs/**/*.pt
-
-# Exceção: checkpoint do CRNN (mais leve) versionado para uso direto na Jetson
-!logs/bj7_crnn/bj7_crnn_best.pt
-
-!bj7/split.txt

@@ -11,9 +11,8 @@ Dimensões para entrada 256×64:
   Cabeça CTC:              → (B, T=64, num_classes)
 """
 
-from __future__ import annotations
-
 import math
+from typing import Tuple
 
 import torch
 import torch.nn as nn
@@ -156,7 +155,7 @@ class PatchEmbed(nn.Module):
             nn.GELU(),
         )
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, int, int]:
         x = self.proj(x)                      # (B, C, H/4, W/4)
         B, C, H, W = x.shape
         return x.flatten(2).transpose(1, 2), H, W  # (B, H/4*W/4, C)
@@ -177,7 +176,7 @@ class MergeBlock(nn.Module):
         )
         self.norm = nn.LayerNorm(out_dim)
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, int, int]:
         B, _, C = x.shape
         x = x.reshape(B, self.H, self.W, C).permute(0, 3, 1, 2)
         x = self.conv(x)
@@ -208,9 +207,9 @@ class SVTRTiny(nn.Module):
         img_h: int = 64,
         img_w: int = 256,
         in_ch: int = 3,
-        embed_dims: tuple[int, ...] = (64, 128, 256),
-        depths: tuple[int, ...] = (3, 6, 3),
-        num_heads: tuple[int, ...] = (2, 4, 8),
+        embed_dims: Tuple[int, ...] = (64, 128, 256),
+        depths: Tuple[int, ...] = (3, 6, 3),
+        num_heads: Tuple[int, ...] = (2, 4, 8),
         num_classes: int = 37,
     ) -> None:
         super().__init__()

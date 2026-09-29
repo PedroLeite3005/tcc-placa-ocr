@@ -1,15 +1,16 @@
 """Loop de treino e avaliação do PARSeq."""
 
-from __future__ import annotations
-
 import math
 import random
 from pathlib import Path
 from types import SimpleNamespace
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+
+from bench import PowerLogger, fmt_opt
 
 from .dataset import (
     BJ7Dataset,
@@ -21,7 +22,7 @@ from .dataset import (
 from .model import load_parseq, predict_strings, predict_strings_with_conf
 
 
-def _format_conf(conf_chars: list[float]) -> tuple[float, str]:
+def _format_conf(conf_chars: List[float]) -> Tuple[float, str]:
     """Calcula conf_seq (média geométrica) e formata conf_chars como 'p1|p2|...'."""
     if not conf_chars:
         return 0.0, ""
@@ -71,7 +72,7 @@ def dump_test_predictions(
                 idx += 1
 
 
-def _char_acc(preds: list[str], targets: list[str]) -> tuple[int, int]:
+def _char_acc(preds: List[str], targets: List[str]) -> Tuple[int, int]:
     """Conta acertos posicionais e total de caracteres (penaliza diferença de tamanho)."""
     matches = 0
     total = 0
@@ -87,13 +88,13 @@ def _char_acc(preds: list[str], targets: list[str]) -> tuple[int, int]:
 @torch.no_grad()
 def evaluate(
     model: nn.Module, loader: DataLoader, device: torch.device
-) -> tuple[float, float]:
+) -> Tuple[float, float]:
     """Retorna (seq_acc, char_acc) sobre o loader."""
     model.eval()
     correct_seq = total_seq = 0
     correct_char = total_char = 0
-    last_preds: list[str] = []
-    last_targets: list[str] = []
+    last_preds = []  # type: List[str]
+    last_targets = []  # type: List[str]
     for imgs, labels in loader:
         imgs = imgs.to(device)
         preds = predict_strings(model, imgs)
@@ -199,7 +200,8 @@ def run_parseq(p: SimpleNamespace) -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=p.learning_rate)
     if log_path:
         log_path.write_text(
-            "epoch,train_loss,val_seq_acc,val_char_acc\n", encoding="utf-8"
+            "epoch,train_loss,val_seq_acc,val_char_acc,avg_temp_c,max_temp_c,avg_power_w,energy_wh\n",
+            encoding="utf-8",
         )
 
     best_char_acc = -1.0
@@ -209,39 +211,47 @@ def run_parseq(p: SimpleNamespace) -> None:
     lr_was_reduced = False
 
     for epoch in range(1, p.epochs + 1):
-        model.train()
-        total_loss = n_batches = 0
+        with PowerLogger(device) as power_log:
+            model.train()
+            total_loss = n_batches = 0
 
-        for imgs, labels in train_loader:
-            imgs = imgs.to(device)
-            labels = [lbl.lower() for lbl in labels]
+            for imgs, labels in train_loader:
+                imgs = imgs.to(device)
+                labels = [lbl.lower() for lbl in labels]
 
-            _, loss, _ = model.forward_logits_loss(imgs, labels)
+                _, loss, _ = model.forward_logits_loss(imgs, labels)
 
-            if epoch == 1 and n_batches == 0:
-                print(f"DEBUG loss inicial (batch 1): {loss.item():.4f}")
+                if epoch == 1 and n_batches == 0:
+                    print(f"DEBUG loss inicial (batch 1): {loss.item():.4f}")
 
-            optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
-            optimizer.step()
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+                optimizer.step()
 
-            total_loss += loss.item()
-            n_batches += 1
+                total_loss += loss.item()
+                n_batches += 1
 
-        avg_loss = total_loss / max(n_batches, 1)
-        seq_acc, char_acc = evaluate(model, val_loader, device)
+            avg_loss = total_loss / max(n_batches, 1)
+            seq_acc, char_acc = evaluate(model, val_loader, device)
+
+        power_stats = power_log.summary()
 
         print(
             f"Época {epoch:3d}/{p.epochs} | "
             f"loss: {avg_loss:.4f} | "
-            f"seq_acc: {seq_acc:.4f} | char_acc: {char_acc:.4f}"
+            f"seq_acc: {seq_acc:.4f} | char_acc: {char_acc:.4f} | "
+            f"temp_med: {fmt_opt(power_stats['avg_temp_c'], '.1f')}C | "
+            f"pot_med: {fmt_opt(power_stats['avg_power_w'], '.1f')}W | "
+            f"energia: {fmt_opt(power_stats['energy_wh'])}Wh"
         )
 
         if log_path:
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(
-                    f"{epoch},{avg_loss:.6f},{seq_acc:.6f},{char_acc:.6f}\n"
+                    f"{epoch},{avg_loss:.6f},{seq_acc:.6f},{char_acc:.6f},"
+                    f"{fmt_opt(power_stats['avg_temp_c'])},{fmt_opt(power_stats['max_temp_c'])},"
+                    f"{fmt_opt(power_stats['avg_power_w'])},{fmt_opt(power_stats['energy_wh'])}\n"
                 )
 
         if char_acc > best_char_acc:

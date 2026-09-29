@@ -18,7 +18,7 @@ _DATA_ROOTS = {
 
 _DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
-_MODELS = [ "parseq"]
+_MODELS = ["crnn"]
 
 def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""

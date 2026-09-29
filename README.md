@@ -130,6 +130,7 @@ Decisões experimentais adicionais: ver [seção 12](#12-decisões-experimentais
 11. [Estrutura do repositório](#11-estrutura-do-repositório)
 12. [Decisões experimentais congeladas](#12-decisões-experimentais-congeladas)
 13. [Documentação complementar](#13-documentação-complementar)
+14. [Inferência na Jetson (TCC2)](#14-inferência-na-jetson-tcc2)
 
 ---
 
@@ -701,6 +702,146 @@ Alterar qualquer item abaixo implica **nova bateria de experimentos** documentad
 
 - **[`docs/pipeline.md`](docs/pipeline.md)** — diagramas Mermaid, contagens de amostras, detalhes de scheduler PARSeq vs CTC, exemplos numéricos de voto ponderado. Regenerar com `python gerar_pipeline_doc.py`.
 - **`docs/pipeline.html`** — mesma documentação em HTML.
+
+---
+
+## 14. Inferência na Jetson (TCC2)
+
+> Início do **TCC2**: portar o pipeline para um dispositivo embarcado (Jetson Nano) e comparar acurácia, FPS, memória, temperatura e energia contra o desktop. **Treino continua só no desktop** (RTX 4060); a Jetson roda **só inferência** (com e sem compressão dos modelos). Seção em construção — os 3 modelos (CRNN, SVTR, PARSeq) já têm `infer.py` portado e validado no desktop; compressão fica para uma etapa futura.
+
+### 14.1 Hardware
+
+| | Desktop | Jetson |
+|---|---|---|
+| Papel | Treino dos 3 modelos | Só inferência (com/sem compressão) |
+| Equipamento | NVIDIA RTX 4060 | Seeed reComputer J1020 v2, módulo Jetson Nano 4GB (P3448) |
+| Sistema | — | JetPack 4.6.6 (L4T R32.7.6) |
+| Armazenamento do projeto | disco local | SSD NVMe 256GB em `/mnt/ssd` (eMMC de 16GB tem só o SO — não usar pra dados/modelos) |
+
+### 14.2 Ambiente Python na Jetson
+
+Projeto em `/mnt/ssd/projeto-tcc2/tcc-placa-ocr`, venv em `/mnt/ssd/projeto-tcc2/venv` (**Python 3.6.9**, com `include-system-site-packages = true` para acessar o OpenCV do sistema).
+
+Versões instaladas manualmente (não usar `pip install -U` nelas):
+
+| Pacote | Versão | Motivo |
+|---|---|---|
+| PyTorch | 1.10.0 | wheel pré-compilada NVIDIA p/ JetPack 4.6.6 + CUDA 10.2 |
+| torchvision | 0.11.1 | compilado do fonte (compatível com o PyTorch acima) |
+| numpy | 1.19.5 | única com wheel pronta pra aarch64 + Python 3.6 |
+| Pillow | 8.4.0 | última compatível com Python 3.6 |
+| OpenCV | (do sistema, via JetPack) | `opencv-python` do PyPI não compila no Ubuntu 18.04 (CMake antigo) |
+
+Por isso, em `requirements.txt`, as linhas de `opencv-python`, `torch`, `torchvision` e `numpy` ficam comentadas — essas quatro são instaladas manualmente nas versões acima; o resto vai por `pip3 install -r requirements.txt` normalmente.
+
+**Sempre exportar antes de rodar qualquer script:**
+```bash
+export OPENBLAS_CORETYPE=ARMV8
+```
+Sem isso, numpy/torch dão `Illegal instruction (core dumped)` (bug do OpenBLAS com a CPU Cortex-A57). Já está em `~/.bashrc`, mas confirme em sessões/scripts novos.
+
+**Nunca `sudo pip3`/`pip` dentro do venv** — ignora o ambiente virtual e instala no Python do sistema, causando `ModuleNotFoundError` mesmo com o venv "ativo".
+
+### 14.3 Compatibilidade Python 3.6
+
+O restante do repositório foi escrito assumindo Python 3.9+ (`from __future__ import annotations`, `list[str]`, `X | None`, `str.removeprefix`) — nada disso roda no Python 3.6.9 da Jetson (nem o `from __future__ import annotations`, que só existe a partir do 3.7). Essas construções já foram convertidas para `typing.List/Optional/Tuple` e um helper `_strip_prefix` (substitui `str.removeprefix`), compatível com 3.6 **e** com o Python do desktop ao mesmo tempo, nos **3 modelos**:
+
+- `bench.py`
+- `crnn/model.py`, `crnn/dataset.py`, `crnn/train.py`, `crnn/infer.py`
+- `svtr/model.py`, `svtr/dataset.py`, `svtr/train.py`, `svtr/infer.py`
+- `parseq/model.py`, `parseq/dataset.py`, `parseq/train.py`, `parseq/infer.py`
+
+**PARSeq tem um problema à parte:** ele carrega um pacote de terceiros (`strhub`, via `torch.hub.load("baudm/parseq", ...)`, cacheado em `~/.cache/torch/hub/baudm_parseq_main/`) que se declara oficialmente `requires-python = ">=3.9"` no seu `pyproject.toml`. Mesmo com o nosso código 100% corrigido, o import do `strhub` quebrava em Python 3.6 antes de qualquer inferência rodar (`EPOCH_OUTPUT = list[dict[str, BatchResult]]` é uma atribuição real, não anotação — levanta `TypeError` na importação do módulo, independente de future-import).
+
+Investigação de escopo (`_get_model_class` em `strhub/models/utils.py` faz import condicional por variante — `abinet`/`crnn`/`trba`/`vitstr` do `strhub` nunca são tocados ao carregar `parseq`/`parseq_tiny`) reduziu o patch necessário a exatamente **2 arquivos** do cache, já corrigidos no desktop com a mesma técnica `typing`:
+
+- `strhub/models/base.py`: `EPOCH_OUTPUT`, `forward_logits_loss` (×3, incluindo subclasses `CrossEntropySystem`/`CTCSystem`) e `_aggregate_results`.
+- `strhub/data/utils.py`: `_tok2ids`, `_ids2tok`, `encode` (×2), `_filter` (×2), `decode`, nas classes `BaseTokenizer`, `Tokenizer` e `CTCTokenizer`.
+
+O `from dataclasses import dataclass` de `strhub/models/base.py` foi mantido como está — resolve-se instalando o backport oficial na Jetson, não editando o arquivo:
+```bash
+pip3 install dataclasses   # backport pra Python 3.6; no-op/desnecessário em 3.7+
+```
+
+Esse patch vive só no cache local do desktop (não é parte do repositório git — é código de terceiros baixado pelo `torch.hub`). Ele é reenviado pra Jetson via `sync_jetson.sh hubcache` (seção 14.4), o que também evita a Jetson precisar baixar/importar sozinha a versão não-patchada. Se o cache do hub for limpo ou atualizado, o patch precisa ser reaplicado antes de reenviar.
+
+### 14.4 Transferir código e artefatos
+
+O código vai por `git pull` normalmente. Checkpoints (`.pt`) e o dataset **não** — `.gitignore` exclui `logs/**/*.pt` e `bj7/` (exceto `bj7/split.txt`, que é leve e vai commitado). Motivo: git não faz diff de binário, então cada retreino viraria um blob novo permanente no histórico, e o GitHub tem limite de 100MB por arquivo.
+
+Em vez disso, use [`sync_jetson.sh`](sync_jetson.sh) do desktop, via `scp`/`ssh` direto:
+
+```bash
+export JETSON_HOST=pedrobastos@<ip-ou-hostname-da-jetson>
+
+./sync_jetson.sh testset                        # bj7/split.txt + bj7/test/ (~75MB, já é só o split de teste)
+./sync_jetson.sh hubcache                       # cache do torch.hub do PARSeq (strhub já patchado p/ Python 3.6, ~1MB)
+./sync_jetson.sh ckpt bj7_crnn bj7_svtr bj7_parseq   # checkpoints treinados no desktop
+./sync_jetson.sh all bj7_crnn bj7_svtr bj7_parseq    # testset + hubcache + os 3 checkpoints de uma vez
+```
+
+Na Jetson, atualizar o código:
+```bash
+cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
+git pull
+```
+
+### 14.5 Rodar inferência (CRNN, SVTR, PARSeq)
+
+`crnn/infer.py`, `svtr/infer.py` e `parseq/infer.py` são standalone e seguem a mesma CLI — carregam só o checkpoint + split pedido (não montam `ds_train`/`ds_val` como o `eval_only` dos respectivos `train.py`), medem FPS/latência/memória com warmup configurável, e gravam tudo em CSV via [`bench.py`](bench.py).
+
+**Smoke test** (poucas imagens, valida que tudo importa/roda antes do benchmark completo):
+```bash
+cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
+source /mnt/ssd/projeto-tcc2/venv/bin/activate
+export OPENBLAS_CORETYPE=ARMV8
+
+python3 -m crnn.infer \
+    --ckpt logs/bj7_crnn/bj7_crnn_best.pt \
+    --dataset bj7 --split testing \
+    --hardware jetson --batch-size 1 --limit 20 \
+    --device cuda \
+    --out-csv logs/bench_crnn_jetson_smoke.csv
+
+python3 -m svtr.infer \
+    --ckpt logs/bj7_svtr/bj7_svtr_best.pt \
+    --dataset bj7 --split testing \
+    --hardware jetson --batch-size 1 --limit 20 \
+    --device cuda \
+    --out-csv logs/bench_svtr_jetson_smoke.csv
+
+python3 -m parseq.infer \
+    --ckpt logs/bj7_parseq/bj7_parseq_best.pt \
+    --dataset bj7 --split testing \
+    --hardware jetson --batch-size 1 --limit 20 \
+    --device cuda \
+    --out-csv logs/bench_parseq_jetson_smoke.csv
+```
+
+**Benchmark completo** (split de teste inteiro, `batch_size=1` simula latência real de borda) — mesma estrutura, só trocando `--limit 20` por nada e o nome do CSV de saída.
+
+No desktop, os mesmos comandos rodam trocando `--hardware desktop` (ou deixando de fora — autodetecta) e sem precisar do `export OPENBLAS_CORETYPE`/venv 3.6.
+
+Cada execução imprime `seq_acc`, `char_acc`, `fps`, `avg_latency_ms` e pico de memória, e **adiciona** uma linha em `--out-csv` (não sobrescreve — várias execuções acumulam no mesmo arquivo, permitindo comparar desktop × Jetson lado a lado).
+
+**Especificidade do PARSeq — resolução do checkpoint:** `parseq/infer.py` tem `--img-h`/`--img-w` (padrão `64`/`256`, batendo com o padrão atual de treino). Isso precisa bater exatamente com a resolução usada no treino do checkpoint carregado, senão dá erro de shape no `pos_embed` ao carregar o `state_dict`. **O `logs/bj7_parseq/bj7_parseq_best.pt` atual foi treinado com o padrão antigo do hub (32×128), antes do fix de resolução da seção de fairness dos modelos — para testá-lo hoje é preciso passar `--img-h 32 --img-w 128`; para gerar um checkpoint compatível com o padrão atual (64×256), o PARSeq precisa ser retreinado (já listado em pendências).**
+
+### 14.6 Métricas coletadas
+
+| Métrica | Onde/como |
+|---|---|
+| Acurácia (placa/caractere) | `crnn/infer.py`, mesma lógica de `crnn/train.py` |
+| FPS / latência | `bench.py::Timer`, com warmup configurável (`--warmup-batches`, padrão 3) |
+| Memória (pico alocado pelo PyTorch) | `bench.py::gpu_memory_mb` (`torch.cuda.max_memory_allocated`) — funciona igual em desktop e Jetson, sem depender de `jetson-stats`/`pynvml` |
+| Temperatura / energia | **Pendente** — requer `jetson-stats` (jtop) na Jetson (`sudo -H pip3 install -U jetson-stats` + reboot) e `pynvml`/`nvidia-smi` no desktop; ainda não implementado em `bench.py` |
+| Hardware | Coluna `hardware` no CSV (`--hardware jetson\|desktop`; autodetectado via `/etc/nv_tegra_release` se omitido) |
+
+### 14.7 Pendências
+
+- Retreinar PARSeq no BJ7 com o `img_size=(64,256)` atual (checkpoint hoje ainda é o legado em 32×128 — ver nota na seção 14.5).
+- Rodar de fato os 3 smoke tests na Jetson (código, checkpoints, dataset de teste e cache do hub prontos; falta a execução física no hardware).
+- Implementar coleta de temperatura/energia (`jetson-stats` na Jetson, `pynvml` no desktop).
+- Pipeline de compressão (quantização/pruning) dos 3 modelos e comparação acurácia × eficiência entre desktop e Jetson, com e sem compressão.
 
 ---
 

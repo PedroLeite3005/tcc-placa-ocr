@@ -25,9 +25,11 @@ import torch
 from torch.utils.data import DataLoader
 
 from bench import (
+    PowerLogger,
     Timer,
     append_csv_row,
     detect_hardware,
+    fmt_opt,
     gpu_memory_mb,
     reset_peak_memory,
     resolve_device,
@@ -49,6 +51,7 @@ _CSV_FIELDS = [
     "n_images", "batch_size", "warmup_batches",
     "total_infer_time_s", "avg_latency_ms", "fps",
     "seq_acc", "char_acc", "peak_gpu_mem_mb",
+    "avg_temp_c", "max_temp_c", "avg_power_w", "energy_wh",
 ]
 
 
@@ -94,8 +97,9 @@ def run_inference(
     loader: DataLoader,
     device: torch.device,
     warmup_batches: int = 3,
+    hardware: Optional[str] = None,
 ) -> dict:
-    """Roda o loader inteiro, medindo tempo/FPS/memória/acurácia.
+    """Roda o loader inteiro, medindo tempo/FPS/memória/acurácia/temperatura/energia.
 
     Os primeiros `warmup_batches` não entram na medição de tempo (cuDNN/CUDA
     context, cache de kernels — sem isso o primeiro batch distorce o FPS,
@@ -108,31 +112,32 @@ def run_inference(
 
     reset_peak_memory(device)
 
-    for batch_idx, (imgs, labels) in enumerate(loader):
-        imgs = imgs.to(device)
-        timed = batch_idx >= warmup_batches
+    with PowerLogger(device, interval_s=0.5, hardware=hardware) as power_log:
+        for batch_idx, (imgs, labels) in enumerate(loader):
+            imgs = imgs.to(device)
+            timed = batch_idx >= warmup_batches
 
-        with Timer(device) as t:
-            logits = model(imgs)
-            preds, _ = greedy_decode_with_conf(logits.cpu())
+            with Timer(device) as t:
+                logits = model(imgs)
+                preds, _ = greedy_decode_with_conf(logits.cpu())
 
-        targets = [decode(lbl.tolist()) for lbl in labels]
-        correct_seq += sum(p == t for p, t in zip(preds, targets))
-        total_seq += len(targets)
-        m, n = _char_acc(preds, targets)
-        correct_char += m
-        total_char += n
+            targets = [decode(lbl.tolist()) for lbl in labels]
+            correct_seq += sum(p == t for p, t in zip(preds, targets))
+            total_seq += len(targets)
+            m, n = _char_acc(preds, targets)
+            correct_char += m
+            total_char += n
 
-        if timed:
-            total_time += t.elapsed
-            n_timed_images += imgs.size(0)
+            if timed:
+                total_time += t.elapsed
+                n_timed_images += imgs.size(0)
 
     seq_acc = correct_seq / total_seq if total_seq else 0.0
     char_acc = correct_char / total_char if total_char else 0.0
     fps = n_timed_images / total_time if total_time > 0 else 0.0
     avg_latency_ms = (total_time / n_timed_images * 1000) if n_timed_images else 0.0
 
-    return {
+    result = {
         "n_images": total_seq,
         "n_timed_images": n_timed_images,
         "total_infer_time_s": total_time,
@@ -142,6 +147,8 @@ def run_inference(
         "char_acc": char_acc,
         "peak_gpu_mem_mb": gpu_memory_mb(device),
     }
+    result.update(power_log.summary())
+    return result
 
 
 def main() -> None:
@@ -179,11 +186,14 @@ def main() -> None:
         num_workers=args.num_workers, collate_fn=collate_fn,
     )
 
-    stats = run_inference(model, loader, device, warmup_batches=args.warmup_batches)
+    stats = run_inference(model, loader, device, warmup_batches=args.warmup_batches, hardware=hardware)
     print(
         f"\nseq_acc={stats['seq_acc']:.4f} | char_acc={stats['char_acc']:.4f} | "
         f"fps={stats['fps']:.2f} | avg_latency={stats['avg_latency_ms']:.2f}ms | "
-        f"peak_gpu_mem={stats['peak_gpu_mem_mb']}"
+        f"peak_gpu_mem={stats['peak_gpu_mem_mb']} | "
+        f"avg_temp={fmt_opt(stats['avg_temp_c'], '.1f')}C | "
+        f"avg_power={fmt_opt(stats['avg_power_w'], '.1f')}W | "
+        f"energy={fmt_opt(stats['energy_wh'])}Wh"
     )
 
     row = {
@@ -202,6 +212,10 @@ def main() -> None:
         "seq_acc": f"{stats['seq_acc']:.4f}",
         "char_acc": f"{stats['char_acc']:.4f}",
         "peak_gpu_mem_mb": stats["peak_gpu_mem_mb"],
+        "avg_temp_c": fmt_opt(stats["avg_temp_c"]),
+        "max_temp_c": fmt_opt(stats["max_temp_c"]),
+        "avg_power_w": fmt_opt(stats["avg_power_w"]),
+        "energy_wh": fmt_opt(stats["energy_wh"]),
     }
     append_csv_row(args.out_csv, row, _CSV_FIELDS)
     print(f"Métricas registradas em: {args.out_csv}")

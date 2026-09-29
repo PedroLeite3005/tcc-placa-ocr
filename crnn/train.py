@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from bench import PowerLogger, fmt_opt
+
 from .dataset import (
     BJ7Dataset,
     NUM_CLASSES,
@@ -222,7 +224,10 @@ def run_crnn(p: SimpleNamespace) -> None:
         T = model(dummy).size(1)
 
     if log_path:
-        log_path.write_text("epoch,train_loss,val_loss,val_acc\n", encoding="utf-8")
+        log_path.write_text(
+            "epoch,train_loss,val_loss,val_acc,avg_temp_c,max_temp_c,avg_power_w,energy_wh\n",
+            encoding="utf-8",
+        )
 
     best_val_acc    = -1.0
     lr_bad_epochs   = 0
@@ -230,41 +235,49 @@ def run_crnn(p: SimpleNamespace) -> None:
     lr_was_reduced  = False
 
     for epoch in range(1, p.epochs + 1):
-        model.train()
-        total_loss = n_batches = 0
+        with PowerLogger(device) as power_log:
+            model.train()
+            total_loss = n_batches = 0
 
-        for imgs, labels in train_loader:
-            imgs = imgs.to(device)
-            targets_cat    = torch.cat(labels)
-            target_lengths = torch.tensor([len(lbl) for lbl in labels], dtype=torch.long)
-            input_lengths  = torch.full((imgs.size(0),), T, dtype=torch.long)
+            for imgs, labels in train_loader:
+                imgs = imgs.to(device)
+                targets_cat    = torch.cat(labels)
+                target_lengths = torch.tensor([len(lbl) for lbl in labels], dtype=torch.long)
+                input_lengths  = torch.full((imgs.size(0),), T, dtype=torch.long)
 
-            logits    = model(imgs)
-            log_probs = logits.permute(1, 0, 2).log_softmax(2)
-            loss      = ctc_loss(log_probs, targets_cat, input_lengths, target_lengths)
+                logits    = model(imgs)
+                log_probs = logits.permute(1, 0, 2).log_softmax(2)
+                loss      = ctc_loss(log_probs, targets_cat, input_lengths, target_lengths)
 
-            optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
-            optimizer.step()
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+                optimizer.step()
 
-            total_loss += loss.item()
-            n_batches  += 1
+                total_loss += loss.item()
+                n_batches  += 1
 
-        avg_train_loss = total_loss / n_batches
-        val_loss       = evaluate_loss(model, val_loader, device, ctc_loss, T)
-        val_acc        = evaluate(model, val_loader, device)
+            avg_train_loss = total_loss / n_batches
+            val_loss       = evaluate_loss(model, val_loader, device, ctc_loss, T)
+            val_acc        = evaluate(model, val_loader, device)
+
+        power_stats = power_log.summary()
 
         print(
             f"Época {epoch:3d}/{p.epochs} | "
             f"train_loss: {avg_train_loss:.4f} | "
-            f"val_loss: {val_loss:.4f} | val_acc: {val_acc:.4f}"
+            f"val_loss: {val_loss:.4f} | val_acc: {val_acc:.4f} | "
+            f"temp_med: {fmt_opt(power_stats['avg_temp_c'], '.1f')}C | "
+            f"pot_med: {fmt_opt(power_stats['avg_power_w'], '.1f')}W | "
+            f"energia: {fmt_opt(power_stats['energy_wh'])}Wh"
         )
 
         if log_path:
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(
-                    f"{epoch},{avg_train_loss:.6f},{val_loss:.6f},{val_acc:.6f}\n"
+                    f"{epoch},{avg_train_loss:.6f},{val_loss:.6f},{val_acc:.6f},"
+                    f"{fmt_opt(power_stats['avg_temp_c'])},{fmt_opt(power_stats['max_temp_c'])},"
+                    f"{fmt_opt(power_stats['avg_power_w'])},{fmt_opt(power_stats['energy_wh'])}\n"
                 )
 
         if val_acc > best_val_acc:

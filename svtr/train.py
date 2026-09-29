@@ -1,15 +1,16 @@
 """Loop de treino e avaliação do SVTR."""
 
-from __future__ import annotations
-
 import math
 import random
 from pathlib import Path
 from types import SimpleNamespace
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+
+from bench import PowerLogger, fmt_opt
 
 from .dataset import (
     BJ7Dataset,
@@ -27,7 +28,7 @@ from .model import SVTRTiny
 # Decodificação CTC (greedy)
 # ---------------------------------------------------------------------------
 
-def greedy_decode(logits: torch.Tensor, blank: int = 0) -> list[str]:
+def greedy_decode(logits: torch.Tensor, blank: int = 0) -> List[str]:
     """Decodifica logits (B, T, C) para lista de strings via greedy CTC."""
     indices = logits.argmax(-1).tolist()   # (B, T)
     results = []
@@ -43,15 +44,15 @@ def greedy_decode(logits: torch.Tensor, blank: int = 0) -> list[str]:
 
 def greedy_decode_with_conf(
     logits: torch.Tensor, blank: int = 0
-) -> tuple[list[str], list[list[float]]]:
+) -> Tuple[List[str], List[List[float]]]:
     """Greedy CTC que também retorna a prob do timestep onde cada char foi ativado."""
     probs_full = logits.softmax(-1)
     top_probs, top_ids = probs_full.max(-1)
-    results: list[str] = []
-    confs: list[list[float]] = []
+    results = []  # type: List[str]
+    confs = []  # type: List[List[float]]
     for seq_ids, seq_probs in zip(top_ids.tolist(), top_probs.tolist()):
-        chars: list[int] = []
-        char_probs: list[float] = []
+        chars = []  # type: List[int]
+        char_probs = []  # type: List[float]
         prev = blank
         for idx, p in zip(seq_ids, seq_probs):
             if idx != blank and idx != prev:
@@ -63,7 +64,7 @@ def greedy_decode_with_conf(
     return results, confs
 
 
-def _format_conf(conf_chars: list[float]) -> tuple[float, str]:
+def _format_conf(conf_chars: List[float]) -> Tuple[float, str]:
     """Calcula conf_seq (média geométrica) e formata conf_chars como 'p1|p2|...'."""
     if not conf_chars:
         return 0.0, ""
@@ -225,7 +226,10 @@ def run_svtr(p: SimpleNamespace) -> None:
     T = p.warp_w // 4   # comprimento da sequência CTC = 64
 
     if log_path:
-        log_path.write_text("epoch,train_loss,val_acc\n", encoding="utf-8")
+        log_path.write_text(
+            "epoch,train_loss,val_acc,avg_temp_c,max_temp_c,avg_power_w,energy_wh\n",
+            encoding="utf-8",
+        )
 
     best_acc = -1.0
     lr_bad_epochs = 0
@@ -233,44 +237,54 @@ def run_svtr(p: SimpleNamespace) -> None:
     lr_was_reduced = False
 
     for epoch in range(1, p.epochs + 1):
-        model.train()
-        total_loss = n_batches = 0
+        with PowerLogger(device) as power_log:
+            model.train()
+            total_loss = n_batches = 0
 
-        for imgs, labels in train_loader:
-            imgs = imgs.to(device)
+            for imgs, labels in train_loader:
+                imgs = imgs.to(device)
 
-            targets_cat = torch.cat(labels)                         # (sum_len,)
-            target_lengths = torch.tensor(
-                [len(lbl) for lbl in labels], dtype=torch.long
-            )
-            input_lengths = torch.full(
-                (imgs.size(0),), T, dtype=torch.long
-            )
+                targets_cat = torch.cat(labels)                         # (sum_len,)
+                target_lengths = torch.tensor(
+                    [len(lbl) for lbl in labels], dtype=torch.long
+                )
+                input_lengths = torch.full(
+                    (imgs.size(0),), T, dtype=torch.long
+                )
 
-            logits = model(imgs)                                    # (B, T, C)
-            log_probs = logits.permute(1, 0, 2).log_softmax(2)     # (T, B, C)
+                logits = model(imgs)                                    # (B, T, C)
+                log_probs = logits.permute(1, 0, 2).log_softmax(2)     # (T, B, C)
 
-            loss = ctc_loss(log_probs, targets_cat, input_lengths, target_lengths)
+                loss = ctc_loss(log_probs, targets_cat, input_lengths, target_lengths)
 
-            optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
-            optimizer.step()
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+                optimizer.step()
 
-            total_loss += loss.item()
-            n_batches += 1
+                total_loss += loss.item()
+                n_batches += 1
 
-        avg_loss = total_loss / n_batches
-        val_acc = evaluate(model, val_loader, device)
+            avg_loss = total_loss / n_batches
+            val_acc = evaluate(model, val_loader, device)
+
+        power_stats = power_log.summary()
 
         print(
             f"Época {epoch:3d}/{p.epochs} | "
-            f"loss: {avg_loss:.4f} | val_acc: {val_acc:.4f}"
+            f"loss: {avg_loss:.4f} | val_acc: {val_acc:.4f} | "
+            f"temp_med: {fmt_opt(power_stats['avg_temp_c'], '.1f')}C | "
+            f"pot_med: {fmt_opt(power_stats['avg_power_w'], '.1f')}W | "
+            f"energia: {fmt_opt(power_stats['energy_wh'])}Wh"
         )
 
         if log_path:
             with open(log_path, "a", encoding="utf-8") as f:
-                f.write(f"{epoch},{avg_loss:.6f},{val_acc:.6f}\n")
+                f.write(
+                    f"{epoch},{avg_loss:.6f},{val_acc:.6f},"
+                    f"{fmt_opt(power_stats['avg_temp_c'])},{fmt_opt(power_stats['max_temp_c'])},"
+                    f"{fmt_opt(power_stats['avg_power_w'])},{fmt_opt(power_stats['energy_wh'])}\n"
+                )
 
         if val_acc > best_acc:
             best_acc = val_acc

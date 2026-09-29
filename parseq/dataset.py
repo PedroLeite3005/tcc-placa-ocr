@@ -1,14 +1,18 @@
 """Dataset classes para PARSeq com RodoSol e BJ7."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+
+
+def _strip_prefix(s: str, prefix: str) -> str:
+    """Equivalente a str.removeprefix (Python 3.9+) — Jetson usa Python 3.6."""
+    return s[len(prefix):] if s.startswith(prefix) else s
 
 
 def _sanitize_plate(text: str) -> str:
@@ -69,7 +73,7 @@ class RodoSolDataset(Dataset):
         transform=None,
     ) -> None:
         self.transform = transform or make_transform()
-        self.samples: list[tuple[Path, str]] = []
+        self.samples = []  # type: List[Tuple[Path, str]]
 
         with open(split_path, encoding="utf-8") as f:
             for line in f:
@@ -80,7 +84,7 @@ class RodoSolDataset(Dataset):
                 if s != split:
                     continue
 
-                parts = Path(rel.removeprefix("./"))
+                parts = Path(_strip_prefix(rel, "./"))
                 category = parts.parts[1]
                 stem = parts.stem
 
@@ -110,8 +114,8 @@ class BJ7Dataset(Dataset):
         transform=None,
     ) -> None:
         self.transform = transform or make_transform()
-        self.samples: list[tuple[Path, str]] = []
-        self.metadata: list[dict] = []
+        self.samples = []  # type: List[Tuple[Path, str]]
+        self.metadata = []  # type: List[dict]
 
         with open(split_path, encoding="utf-8") as f:
             for line in f:
@@ -122,7 +126,7 @@ class BJ7Dataset(Dataset):
                 if s != split:
                     continue
 
-                track_dir = data_root / rel.removeprefix("./")
+                track_dir = data_root / _strip_prefix(rel, "./")
                 ann_path = track_dir / "annotations.json"
                 if not ann_path.exists():
                     continue
@@ -161,7 +165,7 @@ class BJ7Dataset(Dataset):
         return img, plate
 
 
-def _read_plate_rodosol(txt_path: Path) -> str | None:
+def _read_plate_rodosol(txt_path: Path) -> Optional[str]:
     try:
         with open(txt_path, encoding="utf-8") as f:
             for line in f:
