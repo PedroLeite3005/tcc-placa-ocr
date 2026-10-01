@@ -12,6 +12,7 @@ def load_parseq(
     decode_ar: bool = True,
     refine_iters: int = 1,
     img_size: Tuple[int, int] = (64, 256),
+    in_chans: int = 3,
 ) -> torch.nn.Module:
     """Carrega PARSeq via Torch Hub sem prompt interativo de confiança.
 
@@ -19,6 +20,9 @@ def load_parseq(
     Opções: 'parseq' (base, ~24M) ou 'parseq_tiny' (~6M).
     img_size: (h, w) da entrada — alinhado com CRNN/SVTR (256×64) em vez do
     padrão do hub (128×32), repassado como kwarg de config ao criar o modelo.
+    in_chans: canais de entrada (3=RGB, 1=grayscale/binarizado). Requer patch
+    em `strhub/models/parseq/model.py` no cache do torch.hub — ver README
+    seção 14 (o `PARSeq.__init__` original do hub não expõe esse parâmetro).
     """
     return torch.hub.load(
         "baudm/parseq",
@@ -27,6 +31,7 @@ def load_parseq(
         decode_ar=decode_ar,
         refine_iters=refine_iters,
         img_size=list(img_size),
+        in_chans=in_chans,
         trust_repo=True,
         skip_validation=True,
     )

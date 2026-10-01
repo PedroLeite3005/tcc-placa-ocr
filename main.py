@@ -2,7 +2,7 @@
 Parâmetros do experimento: edite em obter_parametros().
   run_name, model, dataset, data_root, split_path, seed, batch_size, epochs,
   learning_rate, write_txt, device, resume, eval_only, early_stop_patience,
-  num_workers, imgsz, conf, iou, warp_w, warp_h
+  num_workers, imgsz, conf, iou, warp_w, warp_h, binarize
 """
 
 from __future__ import annotations
@@ -18,11 +18,12 @@ _DATA_ROOTS = {
 
 _DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
-_MODELS = ["crnn"]
+_MODELS = ["svtr", "parseq"]
+_BINARIZE = True  # True = pré-processamento leve (grayscale + binarização Otsu, 1 canal real) em vez de RGB.
 
-def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
+def obter_parametros(model: str, dataset: str, binarize: bool = False) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""
-    run_name = f"{dataset}_{model}"  # Nome único do experimento (dataset + modelo).
+    run_name = f"{dataset}_{model}_bin" if binarize else f"{dataset}_{model}"  # Nome único do experimento.
     out_dir = Path("logs") / run_name  # Pasta onde logs e checkpoints deste run serão salvos.
 
     # caminhos
@@ -69,6 +70,7 @@ def obter_parametros(model: str, dataset: str) -> SimpleNamespace:
         run_name=run_name,
         model=model,
         dataset=dataset,
+        binarize=binarize,
         data_root=data_root,
         split_path=split_path,
         out_dir=out_dir,
@@ -117,7 +119,7 @@ def main() -> None:
 
     for model in _MODELS:
         for dataset in _DATASETS:
-            p = obter_parametros(model=model, dataset=dataset)
+            p = obter_parametros(model=model, dataset=dataset, binarize=_BINARIZE)
             p.out_dir.mkdir(parents=True, exist_ok=True)
             print(f"\n=== INÍCIO {p.run_name} ===")
             try:

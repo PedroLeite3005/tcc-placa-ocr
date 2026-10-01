@@ -155,8 +155,9 @@ def run_crnn(p: SimpleNamespace) -> None:
     data_root = Path(p.data_root)
     split_path = Path(p.split_path) if p.split_path else data_root / "split.txt"
 
-    tf_train = make_transform_train()
-    tf_eval = make_transform()
+    binarize = getattr(p, "binarize", False)
+    tf_train = make_transform_train(binarize=binarize)
+    tf_eval = make_transform(binarize=binarize)
 
     if p.dataset == "rodosol":
         def make_ds(split: str):
@@ -192,7 +193,7 @@ def run_crnn(p: SimpleNamespace) -> None:
         num_workers=p.num_workers, collate_fn=collate_fn,
     )
 
-    model = CRNN(num_classes=NUM_CLASSES).to(device)
+    model = CRNN(num_classes=NUM_CLASSES, in_ch=1 if binarize else 3).to(device)
 
     n_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
     print(f"CRNN — parâmetros treináveis: {n_params:,}")
@@ -220,7 +221,7 @@ def run_crnn(p: SimpleNamespace) -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=p.learning_rate)
 
     with torch.no_grad():
-        dummy = torch.zeros(1, 3, p.warp_h, p.warp_w, device=device)
+        dummy = torch.zeros(1, 1 if binarize else 3, p.warp_h, p.warp_w, device=device)
         T = model(dummy).size(1)
 
     if log_path:

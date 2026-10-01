@@ -120,8 +120,9 @@ def run_parseq(p: SimpleNamespace) -> None:
     data_root = Path(p.data_root)
     split_path = Path(p.split_path) if p.split_path else data_root / "split.txt"
 
-    tf_train = make_transform_train()
-    tf_eval = make_transform()
+    binarize = getattr(p, "binarize", False)
+    tf_train = make_transform_train(binarize=binarize)
+    tf_eval = make_transform(binarize=binarize)
 
     if p.dataset == "rodosol":
         def make_ds(split: str):
@@ -172,6 +173,7 @@ def run_parseq(p: SimpleNamespace) -> None:
         pretrained=p.parseq_pretrained,
         decode_ar=p.parseq_decode_ar,
         refine_iters=p.parseq_refine_iters,
+        in_chans=1 if binarize else 3,
     ).to(device)
 
     n_params = sum(param.numel() for param in model.parameters() if param.requires_grad)

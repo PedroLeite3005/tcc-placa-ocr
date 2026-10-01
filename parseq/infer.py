@@ -62,6 +62,7 @@ def load_model(
     decode_ar: bool = True,
     refine_iters: int = 1,
     img_size=(64, 256),
+    binarize: bool = False,
 ) -> torch.nn.Module:
     # pretrained=False é obrigatório aqui — ver docstring do módulo.
     model = load_parseq(
@@ -70,6 +71,7 @@ def load_model(
         decode_ar=decode_ar,
         refine_iters=refine_iters,
         img_size=img_size,
+        in_chans=1 if binarize else 3,
     ).to(device)
     state = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(state)
@@ -79,9 +81,9 @@ def load_model(
 
 def build_test_dataset(
     dataset_name: str, data_root: Path, split_path: Path, split: str, limit: Optional[int],
-    img_h: int = 64, img_w: int = 256,
+    img_h: int = 64, img_w: int = 256, binarize: bool = False,
 ):
-    tf = _make_transform(w=img_w, h=img_h)
+    tf = _make_transform(w=img_w, h=img_h, binarize=binarize)
     if dataset_name == "rodosol":
         ds = RodoSolDataset(data_root, split_path, split, transform=tf)
     elif dataset_name == "bj7":
@@ -172,6 +174,7 @@ def main() -> None:
     ap.add_argument("--parseq-refine-iters", type=int, default=1)
     ap.add_argument("--img-h", type=int, default=64, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 64).")
     ap.add_argument("--img-w", type=int, default=256, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 256).")
+    ap.add_argument("--binarize", action="store_true", help="Grayscale + binarização Otsu (1 canal) — tem que bater com o checkpoint carregado.")
     ap.add_argument("--out-csv", type=Path, default=Path("logs/bench_parseq.csv"))
     ap.add_argument("--dump-preds", type=Path, default=None, help="Se dado, salva CSV de predições (formato fusion.py) — só para dataset=bj7.")
     args = ap.parse_args()
@@ -189,13 +192,14 @@ def main() -> None:
         decode_ar=args.parseq_decode_ar,
         refine_iters=args.parseq_refine_iters,
         img_size=(args.img_h, args.img_w),
+        binarize=args.binarize,
     )
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"PARSeq — parâmetros: {n_params:,}")
 
     ds = build_test_dataset(
         args.dataset, data_root, split_path, args.split, args.limit,
-        img_h=args.img_h, img_w=args.img_w,
+        img_h=args.img_h, img_w=args.img_w, binarize=args.binarize,
     )
     print(f"Amostras ({args.split}): {len(ds)}")
     loader = DataLoader(

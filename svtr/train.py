@@ -151,8 +151,9 @@ def run_svtr(p: SimpleNamespace) -> None:
     # ------------------------------------------------------------------
     # Datasets
     # ------------------------------------------------------------------
-    tf_train = make_transform_train()
-    tf_eval = make_transform()
+    binarize = getattr(p, "binarize", False)
+    tf_train = make_transform_train(binarize=binarize)
+    tf_eval = make_transform(binarize=binarize)
 
     if p.dataset == "rodosol":
         def make_ds(split: str):
@@ -193,6 +194,7 @@ def run_svtr(p: SimpleNamespace) -> None:
     # ------------------------------------------------------------------
     model = SVTRTiny(
         img_h=p.warp_h, img_w=p.warp_w, num_classes=NUM_CLASSES,
+        in_ch=1 if binarize else 3,
     ).to(device)
 
     n_params = sum(param.numel() for param in model.parameters() if param.requires_grad)

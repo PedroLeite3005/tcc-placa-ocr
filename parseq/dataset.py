@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import cv2
+import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
@@ -15,6 +17,31 @@ def _strip_prefix(s: str, prefix: str) -> str:
     return s[len(prefix):] if s.startswith(prefix) else s
 
 
+def _otsu_binarize(img: Image.Image) -> Image.Image:
+    """Grayscale + binarização por limiar de Otsu (adaptativo por imagem).
+
+    Pré-processamento mais leve pra Jetson: reduz a entrada de 3 canais (RGB)
+    pra 1 canal real preto/branco, não apenas grayscale replicado.
+    """
+    arr = np.array(img.convert("L"))
+    _, binarized = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return Image.fromarray(binarized)
+
+
+def _tail_transform_steps(binarize: bool) -> list:
+    """Últimos passos do pipeline: binariza (1 canal) ou normaliza em RGB (3 canais)."""
+    if binarize:
+        return [
+            transforms.Lambda(_otsu_binarize),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5], std=[0.5]),
+        ]
+    return [
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+
+
 def _sanitize_plate(text: str) -> str:
     """Normaliza placa: uppercase + remove tudo que não é alfanumérico.
 
@@ -24,22 +51,20 @@ def _sanitize_plate(text: str) -> str:
     return "".join(c for c in text.upper() if c.isalnum())
 
 
-def make_transform(w: int = 256, h: int = 64) -> transforms.Compose:
+def make_transform(w: int = 256, h: int = 64, binarize: bool = False) -> transforms.Compose:
     """Transformação padrão para entrada do PARSeq (val/test)."""
     return transforms.Compose(
-        [
-            transforms.Resize((h, w)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-        ]
+        [transforms.Resize((h, w))] + _tail_transform_steps(binarize)
     )
 
 
-def make_transform_train(w: int = 256, h: int = 64) -> transforms.Compose:
-    """Transformação de treino com augmentations leves para placas."""
+def make_transform_train(w: int = 256, h: int = 64, binarize: bool = False) -> transforms.Compose:
+    """Transformação de treino com augmentations leves para placas.
+
+    `binarize=True`: as augmentations de cor/blur são aplicadas antes da
+    binarização (simula variação real de iluminação/foco que existiria antes
+    de um binarizador de verdade — a placa já sai preto/branco pro modelo).
+    """
     return transforms.Compose(
         [
             transforms.Resize((h, w)),
@@ -55,12 +80,7 @@ def make_transform_train(w: int = 256, h: int = 64) -> transforms.Compose:
                 fill=0,
             ),
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-        ]
+        ] + _tail_transform_steps(binarize)
     )
 
 

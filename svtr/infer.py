@@ -62,8 +62,8 @@ def _char_acc(preds: List[str], targets: List[str]) -> Tuple[int, int]:
     return matches, total
 
 
-def load_model(ckpt_path: Path, device: torch.device) -> SVTRTiny:
-    model = SVTRTiny(num_classes=NUM_CLASSES).to(device)
+def load_model(ckpt_path: Path, device: torch.device, binarize: bool = False) -> SVTRTiny:
+    model = SVTRTiny(num_classes=NUM_CLASSES, in_ch=1 if binarize else 3).to(device)
     state = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(state)
     model.eval()
@@ -71,9 +71,10 @@ def load_model(ckpt_path: Path, device: torch.device) -> SVTRTiny:
 
 
 def build_test_dataset(
-    dataset_name: str, data_root: Path, split_path: Path, split: str, limit: Optional[int]
+    dataset_name: str, data_root: Path, split_path: Path, split: str, limit: Optional[int],
+    binarize: bool = False,
 ):
-    tf = make_transform()
+    tf = make_transform(binarize=binarize)
     if dataset_name == "rodosol":
         ds = RodoSolDataset(data_root, split_path, split, transform=tf)
     elif dataset_name == "bj7":
@@ -160,6 +161,7 @@ def main() -> None:
     ap.add_argument("--num-workers", type=int, default=0)
     ap.add_argument("--device", default="cuda", help="cuda | cpu | mps.")
     ap.add_argument("--hardware", default=None, help="jetson | desktop. Padrão: autodetectado.")
+    ap.add_argument("--binarize", action="store_true", help="Grayscale + binarização Otsu (1 canal) — tem que bater com o checkpoint carregado.")
     ap.add_argument("--out-csv", type=Path, default=Path("logs/bench_svtr.csv"))
     ap.add_argument("--dump-preds", type=Path, default=None, help="Se dado, salva CSV de predições (formato fusion.py) — só para dataset=bj7.")
     args = ap.parse_args()
@@ -171,11 +173,11 @@ def main() -> None:
 
     print(f"Hardware: {hardware} | device: {device}")
     print(f"Carregando checkpoint: {args.ckpt}")
-    model = load_model(args.ckpt, device)
+    model = load_model(args.ckpt, device, binarize=args.binarize)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"SVTR-Tiny — parâmetros: {n_params:,}")
 
-    ds = build_test_dataset(args.dataset, data_root, split_path, args.split, args.limit)
+    ds = build_test_dataset(args.dataset, data_root, split_path, args.split, args.limit, binarize=args.binarize)
     print(f"Amostras ({args.split}): {len(ds)}")
     loader = DataLoader(
         ds, batch_size=args.batch_size, shuffle=False,
