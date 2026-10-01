@@ -8,10 +8,11 @@ desktop x Jetson.
 `gpu_memory_mb` funciona nos dois ambientes hoje porque usa a API de alocação
 do próprio PyTorch (existe tanto no build de desktop quanto no build CUDA 10.2
 da Jetson Nano). Temperatura/potência/energia (`PowerLogger`) usam `nvidia-smi`
-no desktop (sem dependência nova) — na Jetson ainda é um TODO (`_jetson_temp_power`),
-porque depende de `jetson-stats` (jtop), que só faz sentido instalar quando se
-estiver de fato na Jetson (ver README seção 14). Até lá, `PowerLogger` na Jetson
-simplesmente retorna `None` pros campos de temp/potência/energia, sem quebrar.
+no desktop (sem dependência nova) e `jetson-stats` (jtop) na Jetson — requer
+`sudo -H pip3 install -U jetson-stats` + reboot lá (ver README seção 14). Se o
+pacote `jtop` não estiver instalado/a conexão falhar, `PowerLogger` avisa uma
+vez e segue retornando `None` pros campos de temp/potência/energia, sem quebrar
+o treino/inferência.
 """
 
 import csv
@@ -154,11 +155,77 @@ def _desktop_temp_power() -> Tuple[Optional[float], Optional[float]]:
     return temp_c, power_w
 
 
+_jtop_handle = None  # conexão jtop reaproveitada entre amostras (abrir uma por chamada seria caro)
+_jtop_unavailable = False  # trava depois da 1ª falha, pra não tentar reconectar a cada amostra
+
+
+def _get_jtop_handle():
+    """Abre (uma vez) e mantém a conexão com o serviço jtop (jetson-stats).
+
+    Lazy + cacheada: `PowerLogger` chama `gpu_temp_power` a cada `interval_s`,
+    então reabrir a conexão a cada amostra seria um overhead desnecessário.
+    """
+    global _jtop_handle, _jtop_unavailable
+    if _jtop_unavailable:
+        return None
+    if _jtop_handle is not None:
+        return _jtop_handle
+    try:
+        from jtop import jtop
+    except ImportError:
+        _jtop_unavailable = True
+        print(
+            "Aviso: pacote 'jtop' (jetson-stats) não encontrado — temp/potência "
+            "ficarão vazias. Instale com: sudo -H pip3 install -U jetson-stats (+ reboot)."
+        )
+        return None
+    try:
+        handle = jtop()
+        handle.start()
+        _jtop_handle = handle
+        return handle
+    except Exception as exc:
+        _jtop_unavailable = True
+        print(
+            f"Aviso: não foi possível conectar ao serviço jtop ({exc}) — confirme "
+            f"'sudo systemctl status jtop.service' e que o usuário está no grupo jtop "
+            f"(requer reboot após instalar jetson-stats)."
+        )
+        return None
+
+
 def _jetson_temp_power() -> Tuple[Optional[float], Optional[float]]:
-    """TODO: plugar `jetson-stats` (jtop) aqui quando o dispositivo estiver com
-    jtop instalado (`sudo -H pip3 install -U jetson-stats` + reboot). Por ora
-    retorna (None, None) — PowerLogger funciona normalmente, só sem esses dados."""
-    return None, None
+    """Lê temperatura/potência via jetson-stats (jtop).
+
+    Os nomes de chave do `jetson.stats` variam entre versões do jetson-stats —
+    tenta as variantes mais comuns e cai pra None se nenhuma bater (nunca
+    levanta exceção, pra não derrubar o treino/inferência por causa de telemetria).
+    """
+    jetson = _get_jtop_handle()
+    if jetson is None:
+        return None, None
+    try:
+        if not jetson.ok():
+            return None, None
+        stats = jetson.stats
+    except Exception:
+        return None, None
+
+    temp_c = None
+    for key in ("Temp GPU", "Temp gpu", "Temp CPU", "Temp cpu"):
+        if stats.get(key) is not None:
+            temp_c = _safe_float(stats[key])
+            break
+
+    power_w = None
+    for key in ("power cur", "Power TOT", "Power cur", "power avg", "Power avg"):
+        if stats.get(key) is not None:
+            power_w = _safe_float(stats[key])
+            if power_w is not None:
+                power_w /= 1000.0  # jtop reporta em mW
+            break
+
+    return temp_c, power_w
 
 
 def gpu_temp_power(device: torch.device, hardware: Optional[str] = None) -> Tuple[Optional[float], Optional[float]]:
