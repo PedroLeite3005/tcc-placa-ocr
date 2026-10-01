@@ -43,7 +43,7 @@ from .model import SVTRTiny
 from .train import dump_test_predictions, greedy_decode_with_conf
 
 _CSV_FIELDS = [
-    "timestamp", "hardware", "device", "model", "dataset", "split",
+    "timestamp", "hardware", "device", "model", "dataset", "split", "binarize",
     "n_images", "batch_size", "warmup_batches",
     "total_infer_time_s", "avg_latency_ms", "fps",
     "seq_acc", "char_acc", "peak_gpu_mem_mb",
@@ -201,6 +201,7 @@ def main() -> None:
         "model": "svtr",
         "dataset": args.dataset,
         "split": args.split,
+        "binarize": args.binarize,
         "n_images": stats["n_images"],
         "batch_size": args.batch_size,
         "warmup_batches": args.warmup_batches,
