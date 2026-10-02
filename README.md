@@ -131,6 +131,7 @@ Decisões experimentais adicionais: ver [seção 12](#12-decisões-experimentais
 12. [Decisões experimentais congeladas](#12-decisões-experimentais-congeladas)
 13. [Documentação complementar](#13-documentação-complementar)
 14. [Inferência na Jetson (TCC2)](#14-inferência-na-jetson-tcc2)
+15. [Referência de comandos (CRNN/SVTR/PARSeq)](#15-referência-de-comandos-crnnsvtrparseq)
 
 ---
 
@@ -830,18 +831,83 @@ Cada execução imprime `seq_acc`, `char_acc`, `fps`, `avg_latency_ms` e pico de
 
 | Métrica | Onde/como |
 |---|---|
-| Acurácia (placa/caractere) | `crnn/infer.py`, mesma lógica de `crnn/train.py` |
+| Acurácia (placa/caractere) | `*/infer.py`, mesma lógica do `evaluate`/decodificação de cada `*/train.py` |
 | FPS / latência | `bench.py::Timer`, com warmup configurável (`--warmup-batches`, padrão 3) |
-| Memória (pico alocado pelo PyTorch) | `bench.py::gpu_memory_mb` (`torch.cuda.max_memory_allocated`) — funciona igual em desktop e Jetson, sem depender de `jetson-stats`/`pynvml` |
-| Temperatura / energia | **Pendente** — requer `jetson-stats` (jtop) na Jetson (`sudo -H pip3 install -U jetson-stats` + reboot) e `pynvml`/`nvidia-smi` no desktop; ainda não implementado em `bench.py` |
+| Memória (pico alocado pelo PyTorch) | `bench.py::gpu_memory_mb` (`torch.cuda.max_memory_allocated`) — funciona igual em desktop e Jetson |
+| Temperatura / potência / energia | `bench.py::PowerLogger` — amostra em background (thread, padrão 1 sample/s no treino e 0.5s/s na inferência) e integra energia por trapézio. Desktop: `nvidia-smi` (com fallback pra GPUs que não expõem `power.draw` direto, lendo `nvidia-smi -q -d POWER`). Jetson: `jetson-stats` (jtop) — requer `sudo -H pip3 install -U jetson-stats` + reboot lá. Se o pacote/serviço não estiver disponível, os campos ficam vazios no CSV sem quebrar o run |
 | Hardware | Coluna `hardware` no CSV (`--hardware jetson\|desktop`; autodetectado via `/etc/nv_tegra_release` se omitido) |
+| Binarização | Coluna `binarize` no CSV (`True`/`False`) — identifica a linha mesmo se os CSVs forem unificados depois |
+
+Comandos completos (smoke test + split inteiro, cor e binarizado, nos 3 modelos): [seção 15](#15-referência-de-comandos-crnnsvtrparseq).
 
 ### 14.7 Pendências
 
-- Retreinar PARSeq no BJ7 com o `img_size=(64,256)` atual (checkpoint hoje ainda é o legado em 32×128 — ver nota na seção 14.5).
-- Rodar de fato os 3 smoke tests na Jetson (código, checkpoints, dataset de teste e cache do hub prontos; falta a execução física no hardware).
-- Implementar coleta de temperatura/energia (`jetson-stats` na Jetson, `pynvml` no desktop).
+- Retreinar PARSeq no BJ7 com o `img_size=(64,256)` atual (checkpoint em cor hoje ainda é o legado em 32×128 — ver nota na seção 14.5) e também a versão binarizada (`parseq_bin` ainda não existe).
+- Validar os resultados binarizados (CRNN/SVTR) num split maior — os primeiros smoke tests (20 imagens) mostraram acurácia bem mais baixa que em cor, mas a amostra é pequena demais pra confirmar se é efeito real da binarização ou ruído.
 - Pipeline de compressão (quantização/pruning) dos 3 modelos e comparação acurácia × eficiência entre desktop e Jetson, com e sem compressão.
+
+## 15. Referência de comandos (CRNN/SVTR/PARSeq)
+
+Todos os comandos abaixo são pra rodar **na Jetson** (`--hardware jetson`). No desktop, troque por `--hardware desktop` (ou omita — autodetecta) e não precisa do `venv`/`OPENBLAS_CORETYPE`. Antes de rodar na Jetson pela primeira vez numa sessão:
+
+```bash
+cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
+source /mnt/ssd/projeto-tcc2/venv/bin/activate
+export OPENBLAS_CORETYPE=ARMV8
+```
+
+Checkpoints usados: `bj7_{modelo}` (cor) e `bj7_{modelo}_bin` (binarizado — grayscale + Otsu, ver seção 14.3). **`parseq_bin` ainda não existe** (PARSeq falta ser retreinado com binarização).
+
+### 15.1 Smoke test (`--limit 20`, rápido — valida que tudo importa/roda)
+
+```bash
+# CRNN — cor
+python3 -m crnn.infer --ckpt logs/bj7_crnn/bj7_crnn_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --out-csv logs/bench_crnn_jetson_smoke.csv
+
+# CRNN — binarizado
+python3 -m crnn.infer --ckpt logs/bj7_crnn_bin/bj7_crnn_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --binarize --out-csv logs/bench_crnn_bin_jetson_smoke.csv
+
+# SVTR — cor
+python3 -m svtr.infer --ckpt logs/bj7_svtr/bj7_svtr_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --out-csv logs/bench_svtr_jetson_smoke.csv
+
+# SVTR — binarizado
+python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --binarize --out-csv logs/bench_svtr_bin_jetson_smoke.csv
+
+# PARSeq — cor (checkpoint legado, resolução 32x128 — ver seção 14.5)
+python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_smoke.csv
+
+# PARSeq — binarizado: AINDA NÃO RODAR (checkpoint não existe até o retreino)
+```
+
+### 15.2 Split de teste inteiro (sem `--limit` — 15 000 imagens, demora bem mais)
+
+```bash
+# CRNN — cor
+python3 -m crnn.infer --ckpt logs/bj7_crnn/bj7_crnn_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --out-csv logs/bench_crnn_jetson_full.csv
+
+# CRNN — binarizado
+python3 -m crnn.infer --ckpt logs/bj7_crnn_bin/bj7_crnn_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --binarize --out-csv logs/bench_crnn_bin_jetson_full.csv
+
+# SVTR — cor
+python3 -m svtr.infer --ckpt logs/bj7_svtr/bj7_svtr_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --out-csv logs/bench_svtr_jetson_full.csv
+
+# SVTR — binarizado
+python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --binarize --out-csv logs/bench_svtr_bin_jetson_full.csv
+
+# PARSeq — cor (checkpoint legado, resolução 32x128)
+python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_full.csv
+
+# PARSeq — binarizado: AINDA NÃO RODAR (checkpoint não existe até o retreino)
+```
+
+### 15.3 Transferir checkpoints novos antes de rodar (no desktop, Git Bash)
+
+```bash
+export JETSON_HOST=pedrobastos@<ip-da-jetson>
+./sync_jetson.sh ckpt bj7_crnn_bin bj7_svtr_bin   # ou qualquer outro run_name pendente
+```
+
+Cada execução **adiciona** uma linha ao `--out-csv` (não sobrescreve) — rodar cor e binarizado com arquivos de saída diferentes (como acima) facilita comparar depois, mas a coluna `binarize` no CSV já identifica cada linha de qualquer forma.
 
 ---
 
