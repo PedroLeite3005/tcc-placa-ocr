@@ -18,7 +18,7 @@ _DATA_ROOTS = {
 
 _DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
-_MODELS = ["svtr", "parseq"]
+_MODELS = ["parseq"]
 _BINARIZE = True  # True = pré-processamento leve (grayscale + binarização Otsu, 1 canal real) em vez de RGB.
 
 def obter_parametros(model: str, dataset: str, binarize: bool = False) -> SimpleNamespace:
@@ -33,7 +33,7 @@ def obter_parametros(model: str, dataset: str, binarize: bool = False) -> Simple
     # treino — defaults usados por CRNN e SVTR
     seed = 42  # Semente para reprodutibilidade de treino.
     batch_size = 64  # Quantidade de amostras por batch.
-    epochs = 30  # Número máximo de épocas de treino.
+    epochs = 100  # Número máximo de épocas de treino.
     learning_rate = 0.0005  # Taxa de aprendizado do otimizador.
     write_txt = True  # Se True, grava histórico de treino em arquivo .txt.
     device = "cuda"  # Dispositivo alvo de execução: cuda | mps | cpu.
