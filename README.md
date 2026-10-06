@@ -842,7 +842,7 @@ Comandos completos (smoke test + split inteiro, cor e binarizado, nos 3 modelos)
 
 ### 14.7 Pendências
 
-- Retreinar PARSeq no BJ7 com o `img_size=(64,256)` atual (checkpoint em cor hoje ainda é o legado em 32×128 — ver nota na seção 14.5) e também a versão binarizada (`parseq_bin` ainda não existe).
+- Retreinar PARSeq **em cor** no BJ7 com o `img_size=(64,256)` atual (checkpoint em cor hoje ainda é o legado em 32×128 — ver nota na seção 14.5). O binarizado (`parseq_bin`) já foi treinado com o padrão atual.
 - Validar os resultados binarizados (CRNN/SVTR) num split maior — os primeiros smoke tests (20 imagens) mostraram acurácia bem mais baixa que em cor, mas a amostra é pequena demais pra confirmar se é efeito real da binarização ou ruído.
 - Pipeline de compressão (quantização/pruning) dos 3 modelos e comparação acurácia × eficiência entre desktop e Jetson, com e sem compressão.
 
@@ -856,7 +856,7 @@ source /mnt/ssd/projeto-tcc2/venv/bin/activate
 export OPENBLAS_CORETYPE=ARMV8
 ```
 
-Checkpoints usados: `bj7_{modelo}` (cor) e `bj7_{modelo}_bin` (binarizado — grayscale + Otsu, ver seção 14.3). **`parseq_bin` ainda não existe** (PARSeq falta ser retreinado com binarização).
+Checkpoints usados: `bj7_{modelo}` (cor) e `bj7_{modelo}_bin` (binarizado — grayscale + Otsu, ver seção 14.3). `parseq_bin` foi treinado já com `img_size=(64,256)` (o padrão atual) — por isso não precisa de `--img-h`/`--img-w` como o `bj7_parseq` legado.
 
 ### 15.1 Smoke test (`--limit 20`, rápido — valida que tudo importa/roda)
 
@@ -876,7 +876,8 @@ python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj
 # PARSeq — cor (checkpoint legado, resolução 32x128 — ver seção 14.5)
 python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_smoke.csv
 
-# PARSeq — binarizado: AINDA NÃO RODAR (checkpoint não existe até o retreino)
+# PARSeq — binarizado
+python3 -m parseq.infer --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --binarize --out-csv logs/bench_parseq_bin_jetson_smoke.csv
 ```
 
 ### 15.2 Split de teste inteiro (sem `--limit` — 15 000 imagens, demora bem mais)
@@ -897,14 +898,15 @@ python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj
 # PARSeq — cor (checkpoint legado, resolução 32x128)
 python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_full.csv
 
-# PARSeq — binarizado: AINDA NÃO RODAR (checkpoint não existe até o retreino)
+# PARSeq — binarizado
+python3 -m parseq.infer --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --binarize --out-csv logs/bench_parseq_bin_jetson_full.csv
 ```
 
 ### 15.3 Transferir checkpoints novos antes de rodar (no desktop, Git Bash)
 
 ```bash
 export JETSON_HOST=pedrobastos@<ip-da-jetson>
-./sync_jetson.sh ckpt bj7_crnn_bin bj7_svtr_bin   # ou qualquer outro run_name pendente
+./sync_jetson.sh ckpt bj7_crnn_bin bj7_svtr_bin bj7_parseq_bin   # ou qualquer outro run_name pendente
 ```
 
 Cada execução **adiciona** uma linha ao `--out-csv` (não sobrescreve) — rodar cor e binarizado com arquivos de saída diferentes (como acima) facilita comparar depois, mas a coluna `binarize` no CSV já identifica cada linha de qualquer forma.
