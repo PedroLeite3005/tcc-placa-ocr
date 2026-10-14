@@ -41,7 +41,7 @@ def load_parseq(
 def predict_strings(model: torch.nn.Module, images: torch.Tensor) -> List[str]:
     """Retorna strings previstas para um batch de imagens."""
     logits = model(images)
-    probs = logits.softmax(-1)
+    probs = logits.float().softmax(-1)  # float32: FP16 (--compress fp16) perde precisão na confiança
     labels, _ = model.tokenizer.decode(probs)
     return labels
 
@@ -52,7 +52,7 @@ def predict_strings_with_conf(
 ) -> Tuple[List[str], List[List[float]]]:
     """Retorna (labels, conf_chars) — uma lista de probs por caractere predito."""
     logits = model(images)
-    probs = logits.softmax(-1)
+    probs = logits.float().softmax(-1)  # float32: FP16 (--compress fp16) perde precisão na confiança
     labels, batch_probs = model.tokenizer.decode(probs)
     confs = []  # type: List[List[float]]
     for label, p in zip(labels, batch_probs):

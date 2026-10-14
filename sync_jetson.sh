@@ -15,6 +15,7 @@
 #   ./sync_jetson.sh testset                       # bj7/split.txt + bj7/test/ (~75MB)
 #   ./sync_jetson.sh hubcache                      # cache do torch.hub do PARSeq (strhub já patchado p/ Python 3.6)
 #   ./sync_jetson.sh all bj7_crnn                  # testset + hubcache + ckpt num comando só
+#   ./sync_jetson.sh fetch                         # traz logs/jetson/* (benchmarks/preds) da Jetson pro desktop
 
 set -euo pipefail
 
@@ -73,13 +74,23 @@ cmd_all() {
     cmd_ckpt "$@"
 }
 
+cmd_fetch() {
+    # Traz os resultados gerados na Jetson (bench_*.csv, preds_*.csv, matrix.log)
+    # pra logs/jetson/ no desktop — a fusão/report rodam aqui (ver README seção 16).
+    mkdir -p logs/jetson
+    echo "Trazendo $JETSON_DIR/logs/jetson/ da Jetson..."
+    scp "$JETSON_HOST:$JETSON_DIR/logs/jetson/*" logs/jetson/
+    echo "OK — resultados em logs/jetson/."
+}
+
 case "${1:-}" in
     ckpt) shift; cmd_ckpt "$@" ;;
     testset) cmd_testset ;;
     hubcache) cmd_hubcache ;;
     all) shift; cmd_all "$@" ;;
+    fetch) cmd_fetch ;;
     *)
-        echo "Uso: $0 {ckpt <run_name>... | testset | hubcache | all <run_name>...}" >&2
+        echo "Uso: $0 {ckpt <run_name>... | testset | hubcache | all <run_name>... | fetch}" >&2
         echo "Exemplo: $0 all bj7_crnn" >&2
         exit 1
         ;;

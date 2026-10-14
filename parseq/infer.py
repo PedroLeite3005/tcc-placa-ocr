@@ -10,6 +10,9 @@ Espelha `crnn/infer.py`, com as adaptações que o PARSeq exige (não usa CTC):
   dimensionados pra resolução padrão do hub (32×128) — incompatível com o
   `img_size=(64,256)` usado neste projeto e quebraria o load_state_dict do
   nosso checkpoint por mismatch de shape nos embeddings posicionais.
+- `--parseq-nar` troca a decodificação autoregressiva (1 passada do decoder por
+  caractere) pela paralela (1 passada só) — bem mais rápido; combinar com
+  `--parseq-refine-iters 0` pra máxima velocidade. Muda a acurácia: medir.
 
 Uso típico (na Jetson, depois de copiar o checkpoint treinado no desktop e o
 cache do torch.hub já patchado — ver `sync_jetson.sh hubcache` e seção 14 do
@@ -25,7 +28,7 @@ README sobre o pacote `strhub`):
 import argparse
 import datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data import DataLoader
@@ -37,21 +40,26 @@ from bench import (
     detect_hardware,
     fmt_opt,
     gpu_memory_mb,
+    power_mode,
     reset_peak_memory,
     resolve_device,
+    write_preds_csv,
 )
+from compress import COMPRESS_MODES, apply_compression, model_size_gz_mb, model_size_mb, sparsity
 
 from .dataset import BJ7Dataset, RodoSolDataset, collate_fn
 from .dataset import make_transform as _make_transform
 from .model import load_parseq, predict_strings_with_conf
-from .train import _char_acc, dump_test_predictions
+from .train import _char_acc
 
 _CSV_FIELDS = [
-    "timestamp", "hardware", "device", "model", "dataset", "split", "binarize",
+    "timestamp", "hardware", "power_mode", "device", "model", "dataset", "split", "binarize",
+    "compress", "decode_mode", "sparsity", "model_size_mb", "model_size_gz_mb",
     "n_images", "batch_size", "warmup_batches",
     "total_infer_time_s", "avg_latency_ms", "fps",
     "seq_acc", "char_acc", "peak_gpu_mem_mb",
     "avg_temp_c", "max_temp_c", "avg_power_w", "energy_wh",
+    "ckpt", "preds_csv",
 ]
 
 
@@ -104,27 +112,35 @@ def run_inference(
     device: torch.device,
     warmup_batches: int = 3,
     hardware: Optional[str] = None,
+    input_dtype: torch.dtype = torch.float32,
 ) -> dict:
     """Roda o loader inteiro, medindo tempo/FPS/memória/acurácia/temperatura/energia.
 
     Os primeiros `warmup_batches` não entram na medição de tempo (cuDNN/CUDA
     context, cache de kernels — sem isso o primeiro batch distorce o FPS,
-    principalmente na Jetson).
+    principalmente na Jetson). Também guarda (gt, pred, conf_chars) de cada
+    imagem em `result["pred_rows"]`, pra gravar o CSV de predições sem uma
+    segunda passada.
     """
     correct_seq = total_seq = 0
     correct_char = total_char = 0
     total_time = 0.0
     n_timed_images = 0
+    pred_rows = []  # type: List[Tuple[str, str, List[float]]]
 
     reset_peak_memory(device)
 
     with PowerLogger(device, interval_s=0.5, hardware=hardware) as power_log:
         for batch_idx, (imgs, labels) in enumerate(loader):
-            imgs = imgs.to(device)
+            imgs = imgs.to(device=device, dtype=input_dtype)
             timed = batch_idx >= warmup_batches
+            if batch_idx == warmup_batches:
+                # Pico de memória só dos batches cronometrados: o warmup inclui o
+                # autotune do cudnn.benchmark, que aloca workspaces enormes.
+                reset_peak_memory(device)
 
             with Timer(device) as t:
-                preds, _ = predict_strings_with_conf(model, imgs)
+                preds, confs = predict_strings_with_conf(model, imgs)
 
             targets = [lbl.lower() for lbl in labels]
             correct_seq += sum(p == t for p, t in zip(preds, targets))
@@ -132,6 +148,7 @@ def run_inference(
             m, n = _char_acc(preds, targets)
             correct_char += m
             total_char += n
+            pred_rows.extend(zip(targets, preds, confs))
 
             if timed:
                 total_time += t.elapsed
@@ -151,6 +168,7 @@ def run_inference(
         "seq_acc": seq_acc,
         "char_acc": char_acc,
         "peak_gpu_mem_mb": gpu_memory_mb(device),
+        "pred_rows": pred_rows,
     }
     result.update(power_log.summary())
     return result
@@ -170,32 +188,40 @@ def main() -> None:
     ap.add_argument("--device", default="cuda", help="cuda | cpu | mps.")
     ap.add_argument("--hardware", default=None, help="jetson | desktop. Padrão: autodetectado.")
     ap.add_argument("--parseq-variant", default="parseq_tiny", help="parseq | parseq_tiny.")
-    ap.add_argument("--parseq-decode-ar", action="store_true", default=True)
-    ap.add_argument("--parseq-refine-iters", type=int, default=1)
+    ap.add_argument("--parseq-nar", action="store_true", help="Decodificação não-autoregressiva (paralela, bem mais rápida).")
+    ap.add_argument("--parseq-refine-iters", type=int, default=1, help="Iterações de refinamento (0 = mais rápido).")
     ap.add_argument("--img-h", type=int, default=64, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 64).")
     ap.add_argument("--img-w", type=int, default=256, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 256).")
     ap.add_argument("--binarize", action="store_true", help="Grayscale + binarização Otsu (1 canal) — tem que bater com o checkpoint carregado.")
+    ap.add_argument("--compress", choices=COMPRESS_MODES, default="none", help="fp16 (GPU) | int8 (força CPU). Pruning: usar checkpoint do prune_model.py.")
     ap.add_argument("--out-csv", type=Path, default=Path("logs/bench_parseq.csv"))
     ap.add_argument("--dump-preds", type=Path, default=None, help="Se dado, salva CSV de predições (formato fusion.py) — só para dataset=bj7.")
     args = ap.parse_args()
 
+    torch.backends.cudnn.benchmark = True
     data_root = args.data_root or Path(args.dataset)
     split_path = args.split_path or data_root / "split.txt"
     device = resolve_device(args.device)
     hardware = (args.hardware or detect_hardware()).lower()
+    decode_ar = not args.parseq_nar
+    decode_mode = "{}_r{}".format("ar" if decode_ar else "nar", args.parseq_refine_iters)
 
-    print(f"Hardware: {hardware} | device: {device}")
+    print(f"Hardware: {hardware} | device: {device} | compress: {args.compress} | decode: {decode_mode}")
     print(f"Carregando checkpoint: {args.ckpt}")
     model = load_model(
         args.ckpt, device,
         variant=args.parseq_variant,
-        decode_ar=args.parseq_decode_ar,
+        decode_ar=decode_ar,
         refine_iters=args.parseq_refine_iters,
         img_size=(args.img_h, args.img_w),
         binarize=args.binarize,
     )
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"PARSeq — parâmetros: {n_params:,}")
+    model_sparsity = sparsity(model)
+    # head fora do INT8: o strhub descobre o device por `head.parameters()`, que somem quantizados.
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+    size_mb, size_gz_mb = model_size_mb(model), model_size_gz_mb(model)
+    print(f"PARSeq — parâmetros: {n_params:,} | esparsidade: {model_sparsity:.2%} | tamanho: {size_mb:.1f}MB ({size_gz_mb:.1f}MB gzip)")
 
     ds = build_test_dataset(
         args.dataset, data_root, split_path, args.split, args.limit,
@@ -207,7 +233,10 @@ def main() -> None:
         num_workers=args.num_workers, collate_fn=collate_fn,
     )
 
-    stats = run_inference(model, loader, device, warmup_batches=args.warmup_batches, hardware=hardware)
+    stats = run_inference(
+        model, loader, device, warmup_batches=args.warmup_batches,
+        hardware=hardware, input_dtype=input_dtype,
+    )
     print(
         f"\nseq_acc={stats['seq_acc']:.4f} | char_acc={stats['char_acc']:.4f} | "
         f"fps={stats['fps']:.2f} | avg_latency={stats['avg_latency_ms']:.2f}ms | "
@@ -217,14 +246,29 @@ def main() -> None:
         f"energy={fmt_opt(stats['energy_wh'])}Wh"
     )
 
+    preds_csv = ""
+    if args.dump_preds is not None:
+        if args.dataset != "bj7":
+            print("Aviso: --dump-preds só é suportado para dataset=bj7 (precisa de ds.metadata).")
+        else:
+            write_preds_csv(args.dump_preds, ds.metadata, stats["pred_rows"])
+            preds_csv = args.dump_preds.as_posix()
+            print(f"Predições salvas em: {args.dump_preds}")
+
     row = {
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
         "hardware": hardware,
+        "power_mode": power_mode(hardware),
         "device": str(device),
         "model": "parseq",
         "dataset": args.dataset,
         "split": args.split,
         "binarize": args.binarize,
+        "compress": args.compress,
+        "decode_mode": decode_mode,
+        "sparsity": f"{model_sparsity:.4f}",
+        "model_size_mb": f"{size_mb:.4f}",
+        "model_size_gz_mb": f"{size_gz_mb:.4f}",
         "n_images": stats["n_images"],
         "batch_size": args.batch_size,
         "warmup_batches": args.warmup_batches,
@@ -238,16 +282,11 @@ def main() -> None:
         "max_temp_c": fmt_opt(stats["max_temp_c"]),
         "avg_power_w": fmt_opt(stats["avg_power_w"]),
         "energy_wh": fmt_opt(stats["energy_wh"]),
+        "ckpt": args.ckpt.as_posix(),
+        "preds_csv": preds_csv,
     }
     append_csv_row(args.out_csv, row, _CSV_FIELDS)
     print(f"Métricas registradas em: {args.out_csv}")
-
-    if args.dump_preds is not None:
-        if args.dataset != "bj7":
-            print("Aviso: --dump-preds só é suportado para dataset=bj7 (precisa de ds.metadata).")
-        else:
-            dump_test_predictions(model, loader, ds, device, args.dump_preds)
-            print(f"Predições salvas em: {args.dump_preds}")
 
 
 if __name__ == "__main__":

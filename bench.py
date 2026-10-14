@@ -16,6 +16,7 @@ o treino/inferência.
 """
 
 import csv
+import math
 import os
 import re
 import subprocess
@@ -91,14 +92,61 @@ def fmt_opt(x: Optional[float], spec: str = ".4f") -> str:
 
 
 def append_csv_row(path: Path, row: dict, fieldnames: List[str]) -> None:
-    """Adiciona uma linha ao CSV de métricas, criando o cabeçalho se necessário."""
+    """Adiciona uma linha ao CSV de métricas, criando o cabeçalho se necessário.
+
+    Se o arquivo já existe com um cabeçalho diferente (ex: CSV antigo, antes de
+    colunas novas serem adicionadas), reescreve com a união das colunas — as
+    linhas antigas ficam com as colunas novas vazias, em vez de desalinhar.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        with open(path, encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            old_fields = reader.fieldnames or []
+            old_rows = list(reader)
+        if old_fields != list(fieldnames):
+            merged = list(fieldnames) + [c for c in old_fields if c not in fieldnames]
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=merged)
+                writer.writeheader()
+                writer.writerows(old_rows)
+                writer.writerow(row)
+            return
     is_new = not path.exists()
     with open(path, "a", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         if is_new:
             writer.writeheader()
         writer.writerow(row)
+
+
+def format_conf(conf_chars: List[float]) -> Tuple[float, str]:
+    """conf_seq (média geométrica) + conf_chars formatado 'p1|p2|...' (formato do fusion.py)."""
+    if not conf_chars:
+        return 0.0, ""
+    eps = 1e-12
+    log_sum = sum(math.log(max(p, eps)) for p in conf_chars)
+    conf_seq = math.exp(log_sum / len(conf_chars))
+    return conf_seq, "|".join("{:.4f}".format(p) for p in conf_chars)
+
+
+def write_preds_csv(path: Path, metadata: List[dict], rows: List[Tuple[str, str, List[float]]]) -> None:
+    """Grava as predições por imagem no formato lido pelo `fusion.py`.
+
+    `rows[i]` = (gt, pred, conf_chars) da i-ésima imagem, na mesma ordem de
+    `metadata` (ds.metadata do BJ7Dataset).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write("track_id,image_type,image_idx,gt,pred,conf_seq,conf_chars\n")
+        for meta, (gt, pred, conf_chars) in zip(metadata, rows):
+            conf_seq, conf_str = format_conf(conf_chars)
+            f.write(
+                "{},{},{},{},{},{:.6f},{}\n".format(
+                    meta["track_id"], meta["image_type"], meta["image_idx"],
+                    gt.upper(), pred.upper(), conf_seq, conf_str,
+                )
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -229,13 +277,37 @@ def _jetson_temp_power() -> Tuple[Optional[float], Optional[float]]:
 
 
 def gpu_temp_power(device: torch.device, hardware: Optional[str] = None) -> Tuple[Optional[float], Optional[float]]:
-    """Retorna (temp_c, power_w) da GPU. (None, None) se não for CUDA ou indisponível."""
-    if device.type != "cuda":
-        return None, None
+    """Retorna (temp_c, power_w). (None, None) se indisponível.
+
+    Na Jetson o jtop mede a placa inteira (CPU+GPU), então vale mesmo pra run
+    na CPU (ex: INT8). No desktop o nvidia-smi só enxerga a GPU — run na CPU
+    fica sem leitura (seria a potência da GPU ociosa, enganoso).
+    """
     hardware = (hardware or detect_hardware()).lower()
     if hardware == "jetson":
         return _jetson_temp_power()
+    if device.type != "cuda":
+        return None, None
     return _desktop_temp_power()
+
+
+def power_mode(hardware: Optional[str] = None) -> str:
+    """Modo de energia da Jetson (nvpmodel, ex: 'MAXN' / '5W') via jtop; '' no desktop.
+
+    Precisa ficar constante entre todos os benchmarks (fixar com
+    `sudo nvpmodel -m 0 && sudo jetson_clocks` antes de medir).
+    """
+    hardware = (hardware or detect_hardware()).lower()
+    if hardware != "jetson":
+        return ""
+    jetson = _get_jtop_handle()
+    if jetson is None:
+        return ""
+    try:
+        mode = jetson.nvpmodel
+        return str(getattr(mode, "name", mode))
+    except Exception:
+        return ""
 
 
 class PowerLogger:

@@ -22,8 +22,10 @@ Cada CSV deve ter colunas:
 
 from __future__ import annotations
 
+import argparse
 import csv
 from collections import Counter
+from itertools import combinations
 from pathlib import Path
 
 # Tipo de cada amostra dentro do dict por track:
@@ -279,7 +281,7 @@ def _format_section(
     title: str,
     inter_caption: str,
     intra: dict[str, dict[str, float]],
-    inter: dict[str, float],
+    inter: dict[str, dict[str, float]],
 ) -> list[str]:
     lines: list[str] = []
     lines.append(f"== {title} ==")
@@ -292,12 +294,13 @@ def _format_section(
             f"   {stats['lr_fusion_acc']:.4f}  |  {stats['n_tracks']}"
         )
     lines.append("")
-    if inter["n_tracks"] > 0 and len(intra) >= 2:
+    if inter:
         lines.append(inter_caption)
-        lines.append(
-            f"  Acuracia por track: {inter['inter_model_acc']:.4f} "
-            f"({inter['n_tracks']} tracks em comum)"
-        )
+        for combo, res in inter.items():
+            lines.append(
+                f"  {combo:<20} acuracia por track: {res['inter_model_acc']:.4f} "
+                f"({res['n_tracks']} tracks em comum)"
+            )
     else:
         lines.append(
             "Fusao inter-modelos: nao calculada "
@@ -309,43 +312,69 @@ def _format_section(
 
 def format_table(
     intra_mv: dict[str, dict[str, float]],
-    inter_mv: dict[str, float],
+    inter_mv: dict[str, dict[str, float]],
     intra_mvcp: dict[str, dict[str, float]],
-    inter_mvcp: dict[str, float],
+    inter_mvcp: dict[str, dict[str, float]],
 ) -> str:
-    """Gera o TXT formatado com as duas seções (MV e MVCP, ambas ponderadas por confianca)."""
+    """Gera o TXT com as duas seções (MV e MVCP). `inter_*` mapeia cada
+    subconjunto de modelos (ensemble, ex: "crnn+svtr") para seu resultado."""
     lines: list[str] = []
     lines.append("=" * 80)
     lines.append("BJ7 - Fusao por track (voto ponderado por confianca)")
     lines.append("=" * 80)
     lines.append("")
-
     lines.extend(
         _format_section(
             title="MV (Voto Majoritario por sequencia, peso = conf_seq)",
-            inter_caption=(
-                "Fusao inter-modelos (1 voto MV por modelo, "
-                "peso = soma de conf_seq):"
-            ),
+            inter_caption="Ensemble / fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):",
             intra=intra_mv,
             inter=inter_mv,
         )
     )
-
     lines.extend(
         _format_section(
             title="MVCP (Voto Majoritario por Caractere/Posicao, peso = conf_chars[pos])",
-            inter_caption=(
-                "Fusao inter-modelos (1 voto MVCP por modelo, "
-                "peso = soma de conf_chars vencedores):"
-            ),
+            inter_caption="Ensemble / fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):",
             intra=intra_mvcp,
             inter=inter_mvcp,
         )
     )
-
     lines.append("=" * 80)
     return "\n".join(lines) + "\n"
+
+
+def _write_summary_csv(
+    path: Path,
+    csv_paths: dict[str, Path],
+    intra_mv: dict[str, dict[str, float]],
+    intra_mvcp: dict[str, dict[str, float]],
+    inter_mv: dict[str, dict[str, float]],
+    inter_mvcp: dict[str, dict[str, float]],
+) -> None:
+    """Resumo legível por máquina (lido pelo report.py): 1 linha por modelo
+    (fusão intra, sobre as imagens LR do track) e 1 por ensemble (inter-modelos)."""
+    fields = ["config", "kind", "members", "preds_csvs", "mv_acc", "mvcp_acc", "n_tracks"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        for name in intra_mv:
+            w.writerow({
+                "config": name, "kind": "intra", "members": name,
+                "preds_csvs": csv_paths[name].as_posix(),
+                "mv_acc": f"{intra_mv[name]['lr_fusion_acc']:.4f}",
+                "mvcp_acc": f"{intra_mvcp[name]['lr_fusion_acc']:.4f}",
+                "n_tracks": intra_mv[name]["n_tracks"],
+            })
+        for combo in inter_mv:
+            members = combo.split("+")
+            w.writerow({
+                "config": combo, "kind": "ensemble", "members": ";".join(members),
+                "preds_csvs": ";".join(csv_paths[m].as_posix() for m in members),
+                "mv_acc": f"{inter_mv[combo]['inter_model_acc']:.4f}",
+                "mvcp_acc": f"{inter_mvcp[combo]['inter_model_acc']:.4f}",
+                "n_tracks": inter_mv[combo]["n_tracks"],
+            })
 
 
 # ---------------------------------------------------------------------------
@@ -356,66 +385,90 @@ def run_fusion(
     models: list[str],
     dataset_name: str,
     logs_dir: Path,
+    csv_paths: dict[str, Path] | None = None,
+    out_path: Path | None = None,
+    summary_csv: Path | None = None,
 ) -> Path | None:
-    """Lê CSVs disponíveis, calcula fusões MV e MVCP (ponderadas por confianca),
-    e escreve a tabela TXT.
+    """Lê CSVs de predições, calcula fusões MV e MVCP (intra-modelo) e o
+    ensemble (inter-modelos) para todo subconjunto de >=2 modelos, e escreve
+    a tabela TXT (+ resumo CSV opcional).
 
-    Retorna o caminho do arquivo gerado, ou None se nenhum CSV foi encontrado.
+    Sem `csv_paths`: usa o caminho padrão `logs/{dataset}_{model}/{dataset}_{model}_preds.csv`
+    (comportamento do main.py). Com `csv_paths` ({nome: caminho}): qualquer
+    CSV — ex: predições geradas na Jetson, ou variantes binarizadas/comprimidas.
+
+    Retorna o caminho da tabela gerada, ou None se nenhum CSV foi encontrado.
     """
-    if dataset_name != "bj7":
-        return None
+    if csv_paths is None:
+        if dataset_name != "bj7":
+            return None
+        csv_paths = {
+            m: logs_dir / f"{dataset_name}_{m}" / f"{dataset_name}_{m}_preds.csv"
+            for m in models
+        }
 
     all_preds: dict[str, dict[str, dict]] = {}
     intra_mv_results: dict[str, dict[str, float]] = {}
     intra_mvcp_results: dict[str, dict[str, float]] = {}
 
-    for model in models:
-        csv_path = logs_dir / f"{dataset_name}_{model}" / (
-            f"{dataset_name}_{model}_preds.csv"
-        )
+    for name, csv_path in csv_paths.items():
         if not csv_path.exists():
-            print(f"[fusion] Aviso: CSV de {model} não encontrado em {csv_path}.")
+            print(f"[fusion] Aviso: CSV de {name} não encontrado em {csv_path}.")
             continue
         try:
             preds_by_track = load_preds_csv(csv_path)
         except ValueError as exc:
-            print(f"[fusion] Aviso: pulando {model} - {exc}")
+            print(f"[fusion] Aviso: pulando {name} - {exc}")
             continue
-        all_preds[model] = preds_by_track
-        intra_mv_results[model] = compute_intra_model_mv(preds_by_track)
-        intra_mvcp_results[model] = compute_intra_model_mvcp(preds_by_track)
+        all_preds[name] = preds_by_track
+        intra_mv_results[name] = compute_intra_model_mv(preds_by_track)
+        intra_mvcp_results[name] = compute_intra_model_mvcp(preds_by_track)
         print(
-            f"[fusion] {model}: "
-            f"MV   HR={intra_mv_results[model]['hr_fusion_acc']:.4f} "
-            f"LR={intra_mv_results[model]['lr_fusion_acc']:.4f} | "
-            f"MVCP HR={intra_mvcp_results[model]['hr_fusion_acc']:.4f} "
-            f"LR={intra_mvcp_results[model]['lr_fusion_acc']:.4f} "
-            f"({intra_mv_results[model]['n_tracks']} tracks)"
+            f"[fusion] {name}: "
+            f"MV   HR={intra_mv_results[name]['hr_fusion_acc']:.4f} "
+            f"LR={intra_mv_results[name]['lr_fusion_acc']:.4f} | "
+            f"MVCP HR={intra_mvcp_results[name]['hr_fusion_acc']:.4f} "
+            f"LR={intra_mvcp_results[name]['lr_fusion_acc']:.4f} "
+            f"({intra_mv_results[name]['n_tracks']} tracks)"
         )
 
     if not intra_mv_results:
         print("[fusion] Nenhum CSV encontrado. Tabela não foi gerada.")
         return None
 
-    if len(all_preds) >= 2:
-        inter_mv_results = compute_inter_model_mv(all_preds)
-        inter_mvcp_results = compute_inter_model_mvcp(all_preds)
-        print(
-            f"[fusion] inter-modelos: "
-            f"MV={inter_mv_results['inter_model_acc']:.4f} | "
-            f"MVCP={inter_mvcp_results['inter_model_acc']:.4f} "
-            f"({inter_mv_results['n_tracks']} tracks)"
-        )
-    else:
-        inter_mv_results = {"inter_model_acc": 0.0, "n_tracks": 0}
-        inter_mvcp_results = {"inter_model_acc": 0.0, "n_tracks": 0}
+    # Ensemble: todo subconjunto de >=2 modelos (ex: crnn+svtr, ..., os 3).
+    inter_mv_results: dict[str, dict[str, float]] = {}
+    inter_mvcp_results: dict[str, dict[str, float]] = {}
+    names = list(all_preds)
+    for r in range(2, len(names) + 1):
+        for combo in combinations(names, r):
+            subset = {m: all_preds[m] for m in combo}
+            label = "+".join(combo)
+            inter_mv_results[label] = compute_inter_model_mv(subset)
+            inter_mvcp_results[label] = compute_inter_model_mvcp(subset)
+            print(
+                f"[fusion] ensemble {label}: "
+                f"MV={inter_mv_results[label]['inter_model_acc']:.4f} | "
+                f"MVCP={inter_mvcp_results[label]['inter_model_acc']:.4f} "
+                f"({inter_mv_results[label]['n_tracks']} tracks)"
+            )
 
     table = format_table(
         intra_mv_results, inter_mv_results, intra_mvcp_results, inter_mvcp_results
     )
-    out_path = logs_dir / f"{dataset_name}_fusion_table.txt"
+    if out_path is None:
+        out_path = logs_dir / f"{dataset_name}_fusion_table.txt"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(table, encoding="utf-8")
     print(f"[fusion] Tabela salva em: {out_path}")
+
+    if summary_csv is not None:
+        found = {m: csv_paths[m] for m in all_preds}
+        _write_summary_csv(
+            summary_csv, found, intra_mv_results, intra_mvcp_results,
+            inter_mv_results, inter_mvcp_results,
+        )
+        print(f"[fusion] Resumo CSV salvo em: {summary_csv}")
     return out_path
 
 
@@ -425,9 +478,32 @@ compute_inter_model = compute_inter_model_mv
 _combined_track_vote = _combined_track_mv
 
 
+def _parse_preds_args(items: list[str]) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    for item in items:
+        name, sep, path = item.partition("=")
+        if not sep or not name or not path:
+            raise SystemExit(f"--preds espera nome=caminho, recebeu: {item!r}")
+        out[name] = Path(path)
+    return out
+
+
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser(
+        description="Fusão MV/MVCP intra-modelo + ensemble inter-modelos a partir de CSVs de predições.",
+    )
+    ap.add_argument(
+        "--preds", nargs="+", default=None, metavar="NOME=CSV",
+        help="Ex: crnn=logs/jetson/preds_bj7_crnn_none.csv svtr=... (sem isso: CSVs padrão de logs/bj7_*/).",
+    )
+    ap.add_argument("--out", type=Path, default=None, help="Tabela TXT (padrão: logs/bj7_fusion_table.txt).")
+    ap.add_argument("--out-csv", type=Path, default=None, help="Resumo CSV (lido pelo report.py).")
+    args = ap.parse_args()
     run_fusion(
         models=["svtr", "crnn", "parseq"],
         dataset_name="bj7",
         logs_dir=Path("logs"),
+        csv_paths=_parse_preds_args(args.preds) if args.preds else None,
+        out_path=args.out,
+        summary_csv=args.out_csv,
     )

@@ -132,6 +132,7 @@ Decisões experimentais adicionais: ver [seção 12](#12-decisões-experimentais
 13. [Documentação complementar](#13-documentação-complementar)
 14. [Inferência na Jetson (TCC2)](#14-inferência-na-jetson-tcc2)
 15. [Referência de comandos (CRNN/SVTR/PARSeq)](#15-referência-de-comandos-crnnsvtrparseq)
+16. [Compressão, fusão na Jetson e ensemble (TCC2)](#16-compressão-fusão-na-jetson-e-ensemble-tcc2)
 
 ---
 
@@ -844,7 +845,8 @@ Comandos completos (smoke test + split inteiro, cor e binarizado, nos 3 modelos)
 
 - Retreinar PARSeq **em cor** no BJ7 com o `img_size=(64,256)` atual (checkpoint em cor hoje ainda é o legado em 32×128 — ver nota na seção 14.5). O binarizado (`parseq_bin`) já foi treinado com o padrão atual.
 - Validar os resultados binarizados (CRNN/SVTR) num split maior — os primeiros smoke tests (20 imagens) mostraram acurácia bem mais baixa que em cor, mas a amostra é pequena demais pra confirmar se é efeito real da binarização ou ruído.
-- Pipeline de compressão (quantização/pruning) dos 3 modelos e comparação acurácia × eficiência entre desktop e Jetson, com e sem compressão.
+- Rodar a matriz de compressão/fusão/ensemble na Jetson (seção 16) e consolidar com `report.py`.
+- MobileNet + distillation (exige retreino) — próxima etapa.
 
 ## 15. Referência de comandos (CRNN/SVTR/PARSeq)
 
@@ -910,6 +912,108 @@ export JETSON_HOST=pedrobastos@<ip-da-jetson>
 ```
 
 Cada execução **adiciona** uma linha ao `--out-csv` (não sobrescreve) — rodar cor e binarizado com arquivos de saída diferentes (como acima) facilita comparar depois, mas a coluna `binarize` no CSV já identifica cada linha de qualquer forma.
+
+---
+
+## 16. Compressão, fusão na Jetson e ensemble (TCC2)
+
+Objetivo: **subir FPS na Jetson sem derrubar muito a acurácia**. Três técnicas de compressão aplicadas a checkpoints já treinados (sem retreino) — **FP16**, **quantização INT8** e **pruning** — mais a fusão MV/MVCP (do TCC1) sobre predições geradas na própria Jetson e o **ensemble** (fusão inter-modelos) medido como uma configuração da curva acurácia × FPS.
+
+### 16.1 O que esperar de cada técnica (limitações da Jetson Nano)
+
+| Técnica | Como | Onde roda | Efeito esperado |
+|---|---|---|---|
+| **FP16** | `--compress fp16` (`model.half()`) | GPU | Modelo 2× menor; **é a técnica que deve subir FPS** — a GPU da Nano tem FP16 com throughput dobrado |
+| **INT8** | `--compress int8` (`torch.quantization.quantize_dynamic` em `Linear`/`LSTM`) | **CPU** | Modelo menor, mas **FPS menor**: a GPU da Nano (Maxwell, compute 5.3) não tem INT8 — nem o TensorRT faz INT8 nela |
+| **Pruning** | `prune_model.py` (L1 global não-estruturado) → checkpoint novo | GPU | Zera pesos mas as matrizes continuam densas: **não acelera**. Ganho = tamanho comprimido (`model_size_gz_mb`). Acurácia cai com a esparsidade |
+| **Ensemble** | `fusion.py` (fusão inter-modelos, todos os subconjuntos) | — | Acurácia sobe, **FPS cai**: modelos rodam em sequência, latência ≈ soma |
+
+Implementação em [`compress.py`](compress.py). No PARSeq, a camada `head` fica fora do INT8 (o `strhub` descobre o device pelos parâmetros dela, que somem quando quantizada).
+
+Ganhos de FPS "de graça" (não são compressão, mas entram no baseline):
+- **Modo de energia da Jetson**: fixar `sudo nvpmodel -m 0` (MAXN, 10W) + `sudo jetson_clocks` **antes de qualquer benchmark** e manter constante. Fica registrado na coluna `power_mode` do CSV (via jtop).
+- **`cudnn.benchmark`** ligado nos 3 `infer.py` (o pico de memória só é medido depois do warmup, porque o autotune aloca workspaces grandes).
+- **PARSeq não-autoregressivo**: `--parseq-nar` decodifica tudo em paralelo em vez de um caractere por vez. Medido no desktop (PARSeq legado, 500 imagens):
+
+  | Decodificação | Flags | seq_acc | char_acc | FPS |
+  |---|---|---|---|---|
+  | AR (padrão) | — | 0,322 | 0,778 | 44 |
+  | NAR sem refino | `--parseq-nar --parseq-refine-iters 0` | 0,288 | 0,575 | 117 |
+  | **NAR + 1 refino** | `--parseq-nar --parseq-refine-iters 1` | **0,326** | **0,775** | **92** |
+  | NAR + 2 refinos | `--parseq-nar --parseq-refine-iters 2` | 0,326 | 0,781 | 81 |
+
+  **NAR + 1 refino é o ponto ideal**: mesma acurácia do AR com ~2,1× o FPS. Sem refino ganha mais FPS mas perde bastante `char_acc`.
+
+### 16.2 Pruning (desktop)
+
+```bash
+python prune_model.py --model crnn   --ckpt logs/bj7_crnn/bj7_crnn_best.pt                       --amount 0.3 0.5 0.7
+python prune_model.py --model svtr   --ckpt logs/bj7_svtr/bj7_svtr_best.pt                       --amount 0.3 0.5 0.7
+python prune_model.py --model parseq --ckpt logs/bj7_parseq/bj7_parseq_best.pt --img-h 32 --img-w 128 --amount 0.3 0.5 0.7
+python prune_model.py --model crnn   --ckpt logs/bj7_crnn_bin/bj7_crnn_bin_best.pt   --binarize  --amount 0.3 0.5 0.7
+python prune_model.py --model svtr   --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt   --binarize  --amount 0.3 0.5 0.7
+python prune_model.py --model parseq --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --binarize --amount 0.3 0.5 0.7
+```
+
+Cada `--amount` vira um run novo (`logs/bj7_crnn_prune30/bj7_crnn_prune30_best.pt` etc.), carregável por qualquer `infer.py` e transferível pelo `sync_jetson.sh ckpt` sem mudança. Referência no desktop (CRNN, 200 imagens): 30% → acurácia 0,33 → 0,295; 50% → 0,205; 70% → colapsa (0,005). Gzip do checkpoint: 27 → 21 / 16 / 10 MB.
+
+### 16.3 Rodar a matriz inteira na Jetson
+
+Do desktop (Git Bash), mandar os checkpoints novos (podados) e atualizar o código:
+
+```bash
+export JETSON_HOST=pedrobastos@<ip-da-jetson>
+./sync_jetson.sh ckpt bj7_crnn_prune30 bj7_crnn_prune50 bj7_crnn_prune70   # + os demais podados
+```
+
+Na Jetson:
+
+```bash
+cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
+git pull
+sudo nvpmodel -m 0 && sudo jetson_clocks
+mkdir -p logs/jetson
+nohup bash run_bench_matrix.sh > logs/jetson/matrix.log 2>&1 &
+tail -f logs/jetson/matrix.log        # Ctrl+C só sai do tail; a matriz continua rodando
+```
+
+[`run_bench_matrix.sh`](run_bench_matrix.sh) roda todo checkpoint em `logs/bj7_*/` × `none/fp16/int8` (podados só `none`) × PARSeq `ar/nar/nar1`, gravando tudo em `logs/jetson/bench_all.csv` e as predições em `logs/jetson/preds_<run>_<modo>.csv` — no mesmo passe cronometrado, sem segunda passada. Com `nohup`, pode fechar o SSH/desligar o desktop. Se cair no meio, rodar de novo retoma (pula o que já tem `preds_*.csv`).
+
+Variáveis úteis: `LIMIT=200` (smoke test da matriz), `INT8_LIMIT=1000` (padrão — INT8 roda na CPU e é lento; vazio = split inteiro), `MODES="none fp16"`, `PARSEQ_DECODES="nar1"`, `PARSEQ_LEGACY=1` (padrão: `bj7_parseq` em cor usa a resolução legada 32×128).
+
+### 16.4 Fusão + ensemble + relatório (desktop)
+
+Trazer os resultados da Jetson e rodar a fusão aqui (`fusion.py` é só voto sobre strings — o resultado não depende de onde roda; o que importa é que as **predições** vieram da Jetson):
+
+```bash
+./sync_jetson.sh fetch
+
+# Ex: fusão + ensembles dos modelos em cor, sem compressão
+python fusion.py --preds \
+    crnn=logs/jetson/preds_bj7_crnn_none.csv \
+    svtr=logs/jetson/preds_bj7_svtr_none.csv \
+    parseq=logs/jetson/preds_bj7_parseq_none_ar.csv \
+    --out logs/jetson/fusion_none.txt --out-csv logs/jetson/fusion_none.csv
+
+# Ex: mesma coisa em FP16 com PARSeq NAR + 1 refino
+python fusion.py --preds \
+    crnn=logs/jetson/preds_bj7_crnn_fp16.csv \
+    svtr=logs/jetson/preds_bj7_svtr_fp16.csv \
+    parseq=logs/jetson/preds_bj7_parseq_fp16_nar1.csv \
+    --out logs/jetson/fusion_fp16.txt --out-csv logs/jetson/fusion_fp16.csv
+
+# Tabela final: individual × fusão intra × ensemble, com FPS/energia/tamanho
+python report.py --bench logs/jetson/bench_all.csv \
+    --fusion logs/jetson/fusion_none.csv logs/jetson/fusion_fp16.csv \
+    --out-csv logs/jetson/report.csv
+```
+
+- `fusion.py` sem `--preds` mantém o comportamento antigo (CSVs de `logs/bj7_*/`, chamado pelo `main.py`). Agora calcula o ensemble para **todo subconjunto** de ≥2 modelos (ex: `crnn+svtr`, `svtr+parseq`, os 3).
+- `report.py`: no ensemble, latência/energia/tamanho = soma dos membros e FPS = 1000/latência somada. `placas_s` = FPS ÷ imagens por track (5 LR no teste) — na fusão por track, cada placa custa todas as suas imagens.
+
+### 16.5 Próxima etapa (fora deste escopo)
+
+**MobileNet + distillation**: backbone leve (ex: MobileNetV3-small no lugar da CNN do CRNN, mesma cabeça BiLSTM+CTC) treinado imitando o SVTR/PARSeq. Exige retreino no desktop.
 
 ---
 
