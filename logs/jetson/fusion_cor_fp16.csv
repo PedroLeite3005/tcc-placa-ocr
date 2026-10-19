@@ -1,0 +1,8 @@
+config,kind,members,preds_csvs,mv_acc,mvcp_acc,n_tracks
+crnn,intra,crnn,logs/jetson/preds_bj7_crnn_fp16.csv,0.6433,0.6697,3000
+svtr,intra,svtr,logs/jetson/preds_bj7_svtr_fp16.csv,0.6633,0.6913,3000
+parseq,intra,parseq,logs/jetson/preds_bj7_parseq_fp16_nar1.csv,0.6850,0.7100,3000
+crnn+svtr,ensemble,crnn;svtr,logs/jetson/preds_bj7_crnn_fp16.csv;logs/jetson/preds_bj7_svtr_fp16.csv,0.6797,0.7013,3000
+crnn+parseq,ensemble,crnn;parseq,logs/jetson/preds_bj7_crnn_fp16.csv;logs/jetson/preds_bj7_parseq_fp16_nar1.csv,0.6933,0.7147,3000
+svtr+parseq,ensemble,svtr;parseq,logs/jetson/preds_bj7_svtr_fp16.csv;logs/jetson/preds_bj7_parseq_fp16_nar1.csv,0.7080,0.7280,3000
+crnn+svtr+parseq,ensemble,crnn;svtr;parseq,logs/jetson/preds_bj7_crnn_fp16.csv;logs/jetson/preds_bj7_svtr_fp16.csv;logs/jetson/preds_bj7_parseq_fp16_nar1.csv,0.7170,0.7320,3000

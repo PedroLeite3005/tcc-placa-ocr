@@ -14,10 +14,14 @@
 #
 # Variáveis (opcionais):
 #   LIMIT=200            limita imagens por run (padrão: split de teste inteiro)
-#   INT8_LIMIT=1000      limite só pro INT8 (roda na CPU, é bem mais lento; vazio = sem limite)
-#   MODES="none fp16 int8"
+#   MODES="none fp16"    padrão sem int8: o PyTorch da Jetson não tem motor de quantização
+#                        (erro NoQEngine) — "int8" só funciona no desktop
+#   INT8_LIMIT=1000      limite só pro INT8, se incluído em MODES (roda na CPU, é lento)
 #   PARSEQ_DECODES="ar nar nar1"   ar=autoregressivo | nar=paralelo sem refino | nar1=paralelo + 1 refino
 #   PARSEQ_LEGACY=1      bj7_parseq em cor (e seus podados) usam --img-h 32 --img-w 128
+#   SKIP_PRUNED=1        pula os checkpoints podados (pruning não muda FPS)
+#   COOLDOWN_C=55        espera a placa esfriar abaixo de N °C antes de cada run, pra todos
+#                        começarem nas mesmas condições térmicas (vazio = não espera)
 #   HARDWARE=jetson      (padrão: autodetecta)
 #   SKIP_DONE=1          pula runs cujo preds_*.csv já existe (permite retomar)
 #   OUT_DIR=logs/jetson
@@ -27,9 +31,11 @@ set -u
 OUT_DIR="${OUT_DIR:-logs/jetson}"
 LIMIT="${LIMIT:-}"
 INT8_LIMIT="${INT8_LIMIT-1000}"
-MODES="${MODES:-none fp16 int8}"
+MODES="${MODES:-none fp16}"
 PARSEQ_DECODES="${PARSEQ_DECODES:-ar nar nar1}"
 PARSEQ_LEGACY="${PARSEQ_LEGACY:-1}"
+SKIP_PRUNED="${SKIP_PRUNED:-0}"
+COOLDOWN_C="${COOLDOWN_C:-}"
 SKIP_DONE="${SKIP_DONE:-1}"
 VENV="${VENV:-/mnt/ssd/projeto-tcc2/venv}"
 
@@ -40,8 +46,28 @@ BENCH="$OUT_DIR/bench_all.csv"
 HW_ARGS=()
 [ -n "${HARDWARE:-}" ] && HW_ARGS=(--hardware "$HARDWARE")
 
-command -v nvpmodel >/dev/null 2>&1 && echo "Modo de energia: $(nvpmodel -q 2>/dev/null | head -1)"
-echo "Início: $(date) | OUT_DIR=$OUT_DIR | LIMIT=${LIMIT:-todos} | INT8_LIMIT=${INT8_LIMIT:-todos}"
+max_temp_c() {
+    # Maior temperatura entre os sensores térmicos (em °C); vazio se não houver sensores.
+    local t
+    t="$(cat /sys/devices/virtual/thermal/thermal_zone*/temp 2>/dev/null | sort -n | tail -1)"
+    [ -n "$t" ] && echo $((t / 1000))
+}
+
+wait_cool() {
+    [ -n "$COOLDOWN_C" ] || return 0
+    local t
+    t="$(max_temp_c)"
+    [ -n "$t" ] || return 0
+    if [ "$t" -gt "$COOLDOWN_C" ]; then
+        echo "[cooldown] ${t}°C — esperando baixar de ${COOLDOWN_C}°C..."
+        while [ "$(max_temp_c)" -gt "$COOLDOWN_C" ]; do sleep 10; done
+        echo "[cooldown] ok: $(max_temp_c)°C"
+    fi
+}
+
+command -v nvpmodel >/dev/null 2>&1 && echo "Modo de energia: $(nvpmodel -q 2>/dev/null | grep -i 'power mode')"
+[ -r /sys/devices/pwm-fan/target_pwm ] && echo "Ventoinha (target_pwm 0-255): $(cat /sys/devices/pwm-fan/target_pwm)"
+echo "Início: $(date) | OUT_DIR=$OUT_DIR | LIMIT=${LIMIT:-todos} | MODES=$MODES | SKIP_PRUNED=$SKIP_PRUNED | COOLDOWN_C=${COOLDOWN_C:-desligado}"
 
 n_ok=0; n_fail=0; n_skip=0
 for ckpt in logs/bj7_*/bj7_*_best.pt; do
@@ -49,6 +75,7 @@ for ckpt in logs/bj7_*/bj7_*_best.pt; do
     run="$(basename "$(dirname "$ckpt")")"          # ex: bj7_svtr_bin_prune50
     model="$(echo "$run" | cut -d_ -f2)"            # crnn | svtr | parseq
     case "$model" in crnn|svtr|parseq) ;; *) continue ;; esac
+    [ "$SKIP_PRUNED" = "1" ] && [[ "$run" == *_prune* ]] && continue
 
     extra=()
     [[ "$run" == *_bin* ]] && extra+=(--binarize)
@@ -82,7 +109,8 @@ for ckpt in logs/bj7_*/bj7_*_best.pt; do
             lim_args=()
             [ -n "$lim" ] && lim_args=(--limit "$lim")
 
-            echo "=== $(date +%H:%M:%S) $tag ==="
+            wait_cool
+            echo "=== $(date +%H:%M:%S) $tag ($(max_temp_c)°C) ==="
             if python3 -m "$model.infer" --ckpt "$ckpt" --dataset bj7 --split testing \
                 --batch-size 1 --device cuda --compress "$mode" \
                 "${extra[@]}" "${dec_args[@]}" "${lim_args[@]}" "${HW_ARGS[@]}" \

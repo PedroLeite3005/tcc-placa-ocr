@@ -1,0 +1,850 @@
+nohup: ignoring input
+Modo de energia: NVPM WARN: fan mode is not set!
+Início: dom out 18 12:00:21 -03 2026 | OUT_DIR=logs/jetson | LIMIT=todos | INT8_LIMIT=1000
+=== 12:00:21 bj7_crnn_bin_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_bin/bj7_crnn_bin_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 0.00% | tamanho: 29.3MB (27.2MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2477 | char_acc=0.6636 | fps=19.37 | avg_latency=51.62ms | peak_gpu_mem=74.54345703125 | avg_temp=63.2C | avg_power=8.6W | energy=2.0490Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_bin_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 12:15:04 bj7_crnn_bin_fp16 ===
+Hardware: jetson | device: cuda | compress: fp16
+Carregando checkpoint: logs/bj7_crnn_bin/bj7_crnn_bin_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 0.00% | tamanho: 14.7MB (13.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2475 | char_acc=0.6636 | fps=17.02 | avg_latency=58.74ms | peak_gpu_mem=53.2763671875 | avg_temp=93.3C | avg_power=8.8W | energy=2.3599Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_bin_fp16.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 12:31:39 bj7_crnn_bin_int8 ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/crnn/infer.py", line 272, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/crnn/infer.py", line 204, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 394, in quantize_dynamic
+    convert(model, mapping, inplace=True)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 480, in convert
+    convert_custom_config_dict=convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 516, in _convert
+    reassign[name] = swap_module(mod, mapping, custom_module_class_mapping)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 541, in swap_module
+    new_mod = mapping[type(mod)].from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 430, in from_float
+    return super(LSTM, cls).from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 228, in from_float
+    mod.bias, mod.batch_first, mod.dropout, mod.bidirectional, dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 335, in __init__
+    super(LSTM, self).__init__('LSTM', *args, **kwargs)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 86, in __init__
+    torch.ops.quantized.linear_prepack(w_ih, b_ih)
+RuntimeError: Didn't find engine for operation quantized::linear_prepack NoQEngine
+Hardware: jetson | device: cuda | compress: int8
+Carregando checkpoint: logs/bj7_crnn_bin/bj7_crnn_bin_best.pt
+[FALHOU] bj7_crnn_bin_int8
+=== 12:31:56 bj7_crnn_bin_prune30_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_bin_prune30/bj7_crnn_bin_prune30_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 30.00% | tamanho: 29.3MB (20.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2439 | char_acc=0.6612 | fps=16.27 | avg_latency=61.47ms | peak_gpu_mem=74.54345703125 | avg_temp=94.9C | avg_power=8.0W | energy=2.2573Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_bin_prune30_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 12:49:23 bj7_crnn_bin_prune50_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_bin_prune50/bj7_crnn_bin_prune50_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 50.00% | tamanho: 29.3MB (15.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1841 | char_acc=0.6194 | fps=16.33 | avg_latency=61.23ms | peak_gpu_mem=74.54345703125 | avg_temp=94.9C | avg_power=7.8W | energy=2.2103Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_bin_prune50_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 13:06:46 bj7_crnn_bin_prune70_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_bin_prune70/bj7_crnn_bin_prune70_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 70.00% | tamanho: 29.3MB (10.0MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0000 | char_acc=0.0894 | fps=16.51 | avg_latency=60.58ms | peak_gpu_mem=74.54345703125 | avg_temp=95.1C | avg_power=7.8W | energy=2.1752Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_bin_prune70_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 13:23:58 bj7_crnn_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn/bj7_crnn_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 0.00% | tamanho: 29.3MB (27.2MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5071 | char_acc=0.8429 | fps=15.23 | avg_latency=65.67ms | peak_gpu_mem=74.6728515625 | avg_temp=94.9C | avg_power=7.7W | energy=2.3551Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 13:42:53 bj7_crnn_fp16 ===
+Hardware: jetson | device: cuda | compress: fp16
+Carregando checkpoint: logs/bj7_crnn/bj7_crnn_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 0.00% | tamanho: 14.7MB (13.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5071 | char_acc=0.8428 | fps=16.15 | avg_latency=61.92ms | peak_gpu_mem=53.3408203125 | avg_temp=94.7C | avg_power=7.7W | energy=2.2308Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_fp16.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 14:00:46 bj7_crnn_int8 ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/crnn/infer.py", line 272, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/crnn/infer.py", line 204, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 394, in quantize_dynamic
+    convert(model, mapping, inplace=True)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 480, in convert
+    convert_custom_config_dict=convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 516, in _convert
+    reassign[name] = swap_module(mod, mapping, custom_module_class_mapping)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 541, in swap_module
+    new_mod = mapping[type(mod)].from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 430, in from_float
+    return super(LSTM, cls).from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 228, in from_float
+    mod.bias, mod.batch_first, mod.dropout, mod.bidirectional, dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 335, in __init__
+    super(LSTM, self).__init__('LSTM', *args, **kwargs)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/rnn.py", line 86, in __init__
+    torch.ops.quantized.linear_prepack(w_ih, b_ih)
+RuntimeError: Didn't find engine for operation quantized::linear_prepack NoQEngine
+Hardware: jetson | device: cuda | compress: int8
+Carregando checkpoint: logs/bj7_crnn/bj7_crnn_best.pt
+[FALHOU] bj7_crnn_int8
+=== 14:01:05 bj7_crnn_prune30_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_prune30/bj7_crnn_prune30_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 30.00% | tamanho: 29.3MB (20.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4945 | char_acc=0.8354 | fps=15.34 | avg_latency=65.19ms | peak_gpu_mem=74.6728515625 | avg_temp=94.7C | avg_power=7.7W | energy=2.3387Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_prune30_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 14:19:53 bj7_crnn_prune50_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_prune50/bj7_crnn_prune50_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 50.00% | tamanho: 29.3MB (15.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4266 | char_acc=0.8051 | fps=16.16 | avg_latency=61.89ms | peak_gpu_mem=74.6728515625 | avg_temp=94.8C | avg_power=7.6W | energy=2.2238Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_prune50_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 14:37:49 bj7_crnn_prune70_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_crnn_prune70/bj7_crnn_prune70_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 70.00% | tamanho: 29.3MB (10.1MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0141 | char_acc=0.3545 | fps=16.34 | avg_latency=61.20ms | peak_gpu_mem=74.6728515625 | avg_temp=94.5C | avg_power=7.6W | energy=2.1870Wh
+Predições salvas em: logs/jetson/preds_bj7_crnn_prune70_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 14:55:35 bj7_parseq_bin_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 23.3MB (21.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2079 | char_acc=0.6396 | fps=5.16 | avg_latency=193.84ms | peak_gpu_mem=54.7470703125 | avg_temp=94.6C | avg_power=7.6W | energy=6.2977Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 15:46:00 bj7_parseq_bin_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 23.3MB (21.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1986 | char_acc=0.6367 | fps=7.65 | avg_latency=130.67ms | peak_gpu_mem=54.7470703125 | avg_temp=94.7C | avg_power=7.7W | energy=4.3937Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 16:20:44 bj7_parseq_bin_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 23.3MB (21.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2091 | char_acc=0.6398 | fps=7.51 | avg_latency=133.24ms | peak_gpu_mem=54.7470703125 | avg_temp=94.6C | avg_power=7.7W | energy=4.4844Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 16:56:05 bj7_parseq_bin_fp16_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 11.7MB (10.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2078 | char_acc=0.6396 | fps=5.35 | avg_latency=187.09ms | peak_gpu_mem=38.986328125 | avg_temp=94.7C | avg_power=7.5W | energy=6.0088Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_fp16_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 17:44:45 bj7_parseq_bin_fp16_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 11.7MB (10.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1989 | char_acc=0.6368 | fps=8.18 | avg_latency=122.28ms | peak_gpu_mem=38.986328125 | avg_temp=94.6C | avg_power=7.7W | energy=4.1066Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_fp16_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 18:17:19 bj7_parseq_bin_fp16_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 0.00% | tamanho: 11.7MB (10.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2089 | char_acc=0.6396 | fps=7.91 | avg_latency=126.35ms | peak_gpu_mem=38.986328125 | avg_temp=94.4C | avg_power=7.6W | energy=4.2074Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_fp16_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 18:50:56 bj7_parseq_bin_int8_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+[FALHOU] bj7_parseq_bin_int8_ar
+=== 18:51:17 bj7_parseq_bin_int8_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+[FALHOU] bj7_parseq_bin_int8_nar
+=== 18:51:35 bj7_parseq_bin_int8_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin/bj7_parseq_bin_best.pt
+[FALHOU] bj7_parseq_bin_int8_nar1
+=== 18:51:52 bj7_parseq_bin_prune30_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune30/bj7_parseq_bin_prune30_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 30.00% | tamanho: 23.3MB (16.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1255 | char_acc=0.5704 | fps=5.13 | avg_latency=194.86ms | peak_gpu_mem=54.7470703125 | avg_temp=94.3C | avg_power=7.6W | energy=6.3156Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune30_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 19:42:27 bj7_parseq_bin_prune30_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin_prune30/bj7_parseq_bin_prune30_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 30.00% | tamanho: 23.3MB (16.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1193 | char_acc=0.5661 | fps=7.69 | avg_latency=130.09ms | peak_gpu_mem=54.7470703125 | avg_temp=94.5C | avg_power=7.7W | energy=4.3811Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune30_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 20:17:01 bj7_parseq_bin_prune30_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune30/bj7_parseq_bin_prune30_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 30.00% | tamanho: 23.3MB (16.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.1246 | char_acc=0.5708 | fps=7.72 | avg_latency=129.53ms | peak_gpu_mem=54.7470703125 | avg_temp=94.4C | avg_power=7.9W | energy=4.4622Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune30_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 20:51:29 bj7_parseq_bin_prune50_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune50/bj7_parseq_bin_prune50_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 50.00% | tamanho: 23.3MB (12.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0005 | char_acc=0.1822 | fps=5.45 | avg_latency=183.46ms | peak_gpu_mem=54.7470703125 | avg_temp=94.5C | avg_power=8.0W | energy=6.2571Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune50_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 21:39:13 bj7_parseq_bin_prune50_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin_prune50/bj7_parseq_bin_prune50_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 50.00% | tamanho: 23.3MB (12.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0001 | char_acc=0.1820 | fps=7.96 | avg_latency=125.61ms | peak_gpu_mem=54.7470703125 | avg_temp=94.2C | avg_power=7.9W | energy=4.3485Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune50_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 22:12:39 bj7_parseq_bin_prune50_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune50/bj7_parseq_bin_prune50_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 50.00% | tamanho: 23.3MB (12.7MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0003 | char_acc=0.1817 | fps=7.50 | avg_latency=133.38ms | peak_gpu_mem=54.7470703125 | avg_temp=94.0C | avg_power=7.7W | energy=4.4514Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune50_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 22:48:06 bj7_parseq_bin_prune70_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune70/bj7_parseq_bin_prune70_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 70.00% | tamanho: 23.3MB (8.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0000 | char_acc=0.0999 | fps=5.13 | avg_latency=194.83ms | peak_gpu_mem=54.7470703125 | avg_temp=94.2C | avg_power=7.6W | energy=6.3123Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune70_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 23:38:44 bj7_parseq_bin_prune70_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_bin_prune70/bj7_parseq_bin_prune70_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 70.00% | tamanho: 23.3MB (8.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0000 | char_acc=0.1017 | fps=7.60 | avg_latency=131.50ms | peak_gpu_mem=54.7470703125 | avg_temp=93.9C | avg_power=7.6W | energy=4.3373Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune70_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 00:13:40 bj7_parseq_bin_prune70_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_bin_prune70/bj7_parseq_bin_prune70_best.pt
+PARSeq — parâmetros: 6,079,583 | esparsidade: 70.00% | tamanho: 23.3MB (8.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0000 | char_acc=0.0998 | fps=7.41 | avg_latency=134.93ms | peak_gpu_mem=54.7470703125 | avg_temp=93.7C | avg_power=7.5W | energy=4.4231Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_bin_prune70_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 00:49:29 bj7_parseq_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5331 | char_acc=0.8629 | fps=9.41 | avg_latency=106.31ms | peak_gpu_mem=47.1376953125 | avg_temp=89.6C | avg_power=6.7W | energy=3.0881Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 01:17:36 bj7_parseq_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5057 | char_acc=0.8055 | fps=23.21 | avg_latency=43.08ms | peak_gpu_mem=47.1376953125 | avg_temp=88.8C | avg_power=7.4W | energy=1.4609Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 01:29:53 bj7_parseq_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5325 | char_acc=0.8627 | fps=19.48 | avg_latency=51.33ms | peak_gpu_mem=47.1376953125 | avg_temp=86.4C | avg_power=7.1W | energy=1.6279Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 01:44:10 bj7_parseq_fp16_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5334 | char_acc=0.8629 | fps=9.46 | avg_latency=105.66ms | peak_gpu_mem=35.064453125 | avg_temp=76.8C | avg_power=5.8W | energy=2.6493Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_fp16_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 02:12:02 bj7_parseq_fp16_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5055 | char_acc=0.8052 | fps=23.10 | avg_latency=43.29ms | peak_gpu_mem=35.064453125 | avg_temp=75.7C | avg_power=6.4W | energy=1.2618Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_fp16_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 02:24:19 bj7_parseq_fp16_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5329 | char_acc=0.8628 | fps=19.43 | avg_latency=51.48ms | peak_gpu_mem=35.064453125 | avg_temp=77.5C | avg_power=6.3W | energy=1.4653Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_fp16_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 02:38:38 bj7_parseq_int8_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+[FALHOU] bj7_parseq_int8_ar
+=== 02:38:57 bj7_parseq_int8_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+[FALHOU] bj7_parseq_int8_nar
+=== 02:39:14 bj7_parseq_int8_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 293, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/parseq/infer.py", line 222, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 391, in quantize_dynamic
+    model = copy.deepcopy(model)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 161, in deepcopy
+    y = copier(memo)
+TypeError: cannot deepcopy this pattern object
+Hardware: jetson | device: cuda | compress: int8 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+[FALHOU] bj7_parseq_int8_nar1
+=== 02:39:31 bj7_parseq_prune30_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_prune30/bj7_parseq_prune30_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 30.00% | tamanho: 23.0MB (16.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5267 | char_acc=0.8596 | fps=9.51 | avg_latency=105.20ms | peak_gpu_mem=47.1376953125 | avg_temp=73.3C | avg_power=5.7W | energy=2.5956Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune30_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 03:07:16 bj7_parseq_prune30_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_prune30/bj7_parseq_prune30_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 30.00% | tamanho: 23.0MB (16.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4995 | char_acc=0.8202 | fps=23.47 | avg_latency=42.60ms | peak_gpu_mem=47.1376953125 | avg_temp=76.5C | avg_power=6.7W | energy=1.2926Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune30_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 03:19:24 bj7_parseq_prune30_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_prune30/bj7_parseq_prune30_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 30.00% | tamanho: 23.0MB (16.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5258 | char_acc=0.8590 | fps=19.61 | avg_latency=51.00ms | peak_gpu_mem=47.1376953125 | avg_temp=79.1C | avg_power=6.6W | energy=1.5166Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune30_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 03:33:37 bj7_parseq_prune50_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_prune50/bj7_parseq_prune50_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 50.00% | tamanho: 23.0MB (12.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4385 | char_acc=0.8236 | fps=9.57 | avg_latency=104.45ms | peak_gpu_mem=47.1376953125 | avg_temp=73.7C | avg_power=5.7W | energy=2.5852Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune50_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 04:01:13 bj7_parseq_prune50_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_prune50/bj7_parseq_prune50_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 50.00% | tamanho: 23.0MB (12.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4195 | char_acc=0.8179 | fps=23.82 | avg_latency=41.97ms | peak_gpu_mem=47.1376953125 | avg_temp=75.6C | avg_power=6.6W | energy=1.2651Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune50_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 04:13:10 bj7_parseq_prune50_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_prune50/bj7_parseq_prune50_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 50.00% | tamanho: 23.0MB (12.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4386 | char_acc=0.8235 | fps=19.98 | avg_latency=50.05ms | peak_gpu_mem=47.1376953125 | avg_temp=77.4C | avg_power=6.5W | energy=1.4677Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune50_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 04:27:06 bj7_parseq_prune70_none_ar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_prune70/bj7_parseq_prune70_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 70.00% | tamanho: 23.0MB (8.1MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0134 | char_acc=0.4001 | fps=9.50 | avg_latency=105.28ms | peak_gpu_mem=47.1376953125 | avg_temp=71.6C | avg_power=5.6W | energy=2.5508Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune70_none_ar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 04:54:53 bj7_parseq_prune70_none_nar ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_prune70/bj7_parseq_prune70_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 70.00% | tamanho: 23.0MB (8.1MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0181 | char_acc=0.4399 | fps=24.01 | avg_latency=41.66ms | peak_gpu_mem=47.1376953125 | avg_temp=74.1C | avg_power=6.5W | energy=1.2373Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune70_none_nar.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 05:06:45 bj7_parseq_prune70_none_nar1 ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_prune70/bj7_parseq_prune70_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 70.00% | tamanho: 23.0MB (8.1MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0131 | char_acc=0.4052 | fps=19.72 | avg_latency=50.72ms | peak_gpu_mem=47.1376953125 | avg_temp=77.0C | avg_power=6.5W | energy=1.4696Wh
+Predições salvas em: logs/jetson/preds_bj7_parseq_prune70_none_nar1.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 05:20:52 bj7_svtr_bin_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_bin/bj7_svtr_bin_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 0.00% | tamanho: 14.0MB (12.9MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2600 | char_acc=0.6710 | fps=15.03 | avg_latency=66.55ms | peak_gpu_mem=31.2568359375 | avg_temp=89.8C | avg_power=8.9W | energy=2.6582Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_bin_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 05:39:12 bj7_svtr_bin_fp16 ===
+Hardware: jetson | device: cuda | compress: fp16
+Carregando checkpoint: logs/bj7_svtr_bin/bj7_svtr_bin_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 0.00% | tamanho: 7.0MB (6.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2592 | char_acc=0.6708 | fps=15.78 | avg_latency=63.37ms | peak_gpu_mem=15.65185546875 | avg_temp=94.1C | avg_power=8.7W | energy=2.5018Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_bin_fp16.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 05:56:47 bj7_svtr_bin_int8 ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/svtr/infer.py", line 272, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/svtr/infer.py", line 204, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 394, in quantize_dynamic
+    convert(model, mapping, inplace=True)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 480, in convert
+    convert_custom_config_dict=convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 516, in _convert
+    reassign[name] = swap_module(mod, mapping, custom_module_class_mapping)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 541, in swap_module
+    new_mod = mapping[type(mod)].from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/linear.py", line 110, in from_float
+    qlinear = cls(mod.in_features, mod.out_features, dtype=dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/linear.py", line 34, in __init__
+    super(Linear, self).__init__(in_features, out_features, bias_, dtype=dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 161, in __init__
+    self._packed_params = LinearPackedParams(dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 19, in __init__
+    self.set_weight_bias(wq, None)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 24, in set_weight_bias
+    self._packed_params = torch.ops.quantized.linear_prepack(weight, bias)
+RuntimeError: Didn't find engine for operation quantized::linear_prepack NoQEngine
+Hardware: jetson | device: cuda | compress: int8
+Carregando checkpoint: logs/bj7_svtr_bin/bj7_svtr_bin_best.pt
+[FALHOU] bj7_svtr_bin_int8
+=== 05:57:01 bj7_svtr_bin_prune30_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_bin_prune30/bj7_svtr_bin_prune30_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 30.00% | tamanho: 14.0MB (9.9MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2539 | char_acc=0.6669 | fps=14.67 | avg_latency=68.17ms | peak_gpu_mem=31.2568359375 | avg_temp=94.3C | avg_power=8.7W | energy=2.6848Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_bin_prune30_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 06:15:52 bj7_svtr_bin_prune50_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_bin_prune50/bj7_svtr_bin_prune50_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 50.00% | tamanho: 14.0MB (7.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2101 | char_acc=0.6254 | fps=14.63 | avg_latency=68.37ms | peak_gpu_mem=31.2568359375 | avg_temp=94.3C | avg_power=8.7W | energy=2.6837Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_bin_prune50_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 06:34:48 bj7_svtr_bin_prune70_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_bin_prune70/bj7_svtr_bin_prune70_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 70.00% | tamanho: 14.0MB (4.9MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0067 | char_acc=0.2755 | fps=14.64 | avg_latency=68.32ms | peak_gpu_mem=31.2568359375 | avg_temp=94.2C | avg_power=8.6W | energy=2.6668Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_bin_prune70_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 06:53:44 bj7_svtr_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr/bj7_svtr_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 0.00% | tamanho: 14.0MB (13.0MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5167 | char_acc=0.8452 | fps=14.44 | avg_latency=69.27ms | peak_gpu_mem=31.3837890625 | avg_temp=94.2C | avg_power=8.4W | energy=2.6550Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 07:13:09 bj7_svtr_fp16 ===
+Hardware: jetson | device: cuda | compress: fp16
+Carregando checkpoint: logs/bj7_svtr/bj7_svtr_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 0.00% | tamanho: 7.0MB (6.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5151 | char_acc=0.8446 | fps=15.87 | avg_latency=63.02ms | peak_gpu_mem=15.71533203125 | avg_temp=94.0C | avg_power=8.4W | energy=2.4459Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_fp16.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 07:30:56 bj7_svtr_int8 ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.6/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/lib/python3.6/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/svtr/infer.py", line 272, in <module>
+    main()
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/svtr/infer.py", line 204, in main
+    model, device, input_dtype = apply_compression(model, args.compress, device)
+  File "/mnt/ssd/projeto-tcc2/tcc-placa-ocr/compress.py", line 61, in apply_compression
+    model, {nn.Linear, nn.LSTM}, dtype=torch.qint8
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 394, in quantize_dynamic
+    convert(model, mapping, inplace=True)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 480, in convert
+    convert_custom_config_dict=convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 515, in _convert
+    convert_custom_config_dict)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 516, in _convert
+    reassign[name] = swap_module(mod, mapping, custom_module_class_mapping)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/ao/quantization/quantize.py", line 541, in swap_module
+    new_mod = mapping[type(mod)].from_float(mod)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/linear.py", line 110, in from_float
+    qlinear = cls(mod.in_features, mod.out_features, dtype=dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/dynamic/modules/linear.py", line 34, in __init__
+    super(Linear, self).__init__(in_features, out_features, bias_, dtype=dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 161, in __init__
+    self._packed_params = LinearPackedParams(dtype)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 19, in __init__
+    self.set_weight_bias(wq, None)
+  File "/mnt/ssd/projeto-tcc2/venv/lib/python3.6/site-packages/torch/nn/quantized/modules/linear.py", line 24, in set_weight_bias
+    self._packed_params = torch.ops.quantized.linear_prepack(weight, bias)
+RuntimeError: Didn't find engine for operation quantized::linear_prepack NoQEngine
+Hardware: jetson | device: cuda | compress: int8
+Carregando checkpoint: logs/bj7_svtr/bj7_svtr_best.pt
+[FALHOU] bj7_svtr_int8
+=== 07:31:11 bj7_svtr_prune30_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_prune30/bj7_svtr_prune30_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 30.00% | tamanho: 14.0MB (9.9MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5065 | char_acc=0.8388 | fps=14.60 | avg_latency=68.49ms | peak_gpu_mem=31.3837890625 | avg_temp=94.0C | avg_power=8.5W | energy=2.6694Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_prune30_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 07:50:20 bj7_svtr_prune50_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_prune50/bj7_svtr_prune50_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 50.00% | tamanho: 14.0MB (7.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4237 | char_acc=0.7854 | fps=14.74 | avg_latency=67.83ms | peak_gpu_mem=31.3837890625 | avg_temp=94.2C | avg_power=8.6W | energy=2.6673Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_prune50_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+=== 08:09:20 bj7_svtr_prune70_none ===
+Hardware: jetson | device: cuda | compress: none
+Carregando checkpoint: logs/bj7_svtr_prune70/bj7_svtr_prune70_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 70.00% | tamanho: 14.0MB (4.9MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.0035 | char_acc=0.1929 | fps=14.78 | avg_latency=67.67ms | peak_gpu_mem=31.3837890625 | avg_temp=94.1C | avg_power=8.5W | energy=2.6444Wh
+Predições salvas em: logs/jetson/preds_bj7_svtr_prune70_none.csv
+Métricas registradas em: logs/jetson/bench_all.csv
+Fim: seg out 19 08:28:18 -03 2026 | ok=50 falhas=10 pulados=0 | resultados em logs/jetson/bench_all.csv
