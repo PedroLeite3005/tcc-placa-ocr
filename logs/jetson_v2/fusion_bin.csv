@@ -1,0 +1,8 @@
+config,kind,members,preds_csvs,mv_acc,mvcp_acc,n_tracks
+crnn_bin,intra,crnn_bin,logs/jetson_v2/preds_bj7_crnn_bin_none.csv,0.3707,0.4080,3000
+svtr_bin,intra,svtr_bin,logs/jetson_v2/preds_bj7_svtr_bin_none.csv,0.4007,0.4440,3000
+parseq_bin,intra,parseq_bin,logs/jetson_v2/preds_bj7_parseq_bin_none_nar1.csv,0.3450,0.3900,3000
+crnn_bin+svtr_bin,ensemble,crnn_bin;svtr_bin,logs/jetson_v2/preds_bj7_crnn_bin_none.csv;logs/jetson_v2/preds_bj7_svtr_bin_none.csv,0.4127,0.4407,3000
+crnn_bin+parseq_bin,ensemble,crnn_bin;parseq_bin,logs/jetson_v2/preds_bj7_crnn_bin_none.csv;logs/jetson_v2/preds_bj7_parseq_bin_none_nar1.csv,0.3907,0.4187,3000
+svtr_bin+parseq_bin,ensemble,svtr_bin;parseq_bin,logs/jetson_v2/preds_bj7_svtr_bin_none.csv;logs/jetson_v2/preds_bj7_parseq_bin_none_nar1.csv,0.4160,0.4453,3000
+crnn_bin+svtr_bin+parseq_bin,ensemble,crnn_bin;svtr_bin;parseq_bin,logs/jetson_v2/preds_bj7_crnn_bin_none.csv;logs/jetson_v2/preds_bj7_svtr_bin_none.csv;logs/jetson_v2/preds_bj7_parseq_bin_none_nar1.csv,0.4267,0.4557,3000

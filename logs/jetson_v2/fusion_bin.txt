@@ -1,0 +1,33 @@
+================================================================================
+BJ7 - Fusao por track (voto ponderado por confianca)
+================================================================================
+
+== MV (Voto Majoritario por sequencia, peso = conf_seq) ==
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+crnn_bin |   0.0000  |   0.3707  |  3000
+svtr_bin |   0.0000  |   0.4007  |  3000
+parseq_bin |   0.0000  |   0.3450  |  3000
+
+Ensemble / fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):
+  crnn_bin+svtr_bin    acuracia por track: 0.4127 (3000 tracks em comum)
+  crnn_bin+parseq_bin  acuracia por track: 0.3907 (3000 tracks em comum)
+  svtr_bin+parseq_bin  acuracia por track: 0.4160 (3000 tracks em comum)
+  crnn_bin+svtr_bin+parseq_bin acuracia por track: 0.4267 (3000 tracks em comum)
+
+== MVCP (Voto Majoritario por Caractere/Posicao, peso = conf_chars[pos]) ==
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+crnn_bin |   0.0000  |   0.4080  |  3000
+svtr_bin |   0.0000  |   0.4440  |  3000
+parseq_bin |   0.0000  |   0.3900  |  3000
+
+Ensemble / fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):
+  crnn_bin+svtr_bin    acuracia por track: 0.4407 (3000 tracks em comum)
+  crnn_bin+parseq_bin  acuracia por track: 0.4187 (3000 tracks em comum)
+  svtr_bin+parseq_bin  acuracia por track: 0.4453 (3000 tracks em comum)
+  crnn_bin+svtr_bin+parseq_bin acuracia por track: 0.4557 (3000 tracks em comum)
+
+================================================================================
