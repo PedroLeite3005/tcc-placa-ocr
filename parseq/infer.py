@@ -167,7 +167,7 @@ def run_inference(
         "fps": fps,
         "seq_acc": seq_acc,
         "char_acc": char_acc,
-        "peak_gpu_mem_mb": gpu_memory_mb(device),
+        "peak_gpu_mem_mb": gpu_memory_mb(device, model),
         "pred_rows": pred_rows,
     }
     result.update(power_log.summary())
@@ -193,7 +193,8 @@ def main() -> None:
     ap.add_argument("--img-h", type=int, default=64, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 64).")
     ap.add_argument("--img-w", type=int, default=256, help="Deve bater com a resolução usada no treino do checkpoint (padrão atual: 256).")
     ap.add_argument("--binarize", action="store_true", help="Grayscale + binarização Otsu (1 canal) — tem que bater com o checkpoint carregado.")
-    ap.add_argument("--compress", choices=COMPRESS_MODES, default="none", help="fp16 (GPU) | int8 (força CPU). Pruning: usar checkpoint do prune_model.py.")
+    ap.add_argument("--compress", choices=COMPRESS_MODES, default="none", help="fp16 (GPU) | int8 (força CPU) | trt_fp16/trt_fp32 (TensorRT, exige --trt-engine). Pruning: usar checkpoint do prune_model.py.")
+    ap.add_argument("--trt-engine", type=Path, default=None, help="Motor TensorRT (.engine) gerado na Jetson por build_trt_engines.sh — usado com --compress trt_*.")
     ap.add_argument("--out-csv", type=Path, default=Path("logs/bench_parseq.csv"))
     ap.add_argument("--dump-preds", type=Path, default=None, help="Se dado, salva CSV de predições (formato fusion.py) — só para dataset=bj7.")
     args = ap.parse_args()
@@ -219,7 +220,7 @@ def main() -> None:
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     model_sparsity = sparsity(model)
     # head fora do INT8: o strhub descobre o device por `head.parameters()`, que somem quantizados.
-    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",))
+    model, device, input_dtype = apply_compression(model, args.compress, device, int8_exclude=("model.head",), trt_engine=args.trt_engine)
     size_mb, size_gz_mb = model_size_mb(model), model_size_gz_mb(model)
     print(f"PARSeq — parâmetros: {n_params:,} | esparsidade: {model_sparsity:.2%} | tamanho: {size_mb:.1f}MB ({size_gz_mb:.1f}MB gzip)")
 

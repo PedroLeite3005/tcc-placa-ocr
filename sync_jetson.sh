@@ -16,6 +16,7 @@
 #   ./sync_jetson.sh hubcache                      # cache do torch.hub do PARSeq (strhub já patchado p/ Python 3.6)
 #   ./sync_jetson.sh all bj7_crnn                  # testset + hubcache + ckpt num comando só
 #   ./sync_jetson.sh fetch                         # traz logs/jetson/* (benchmarks/preds) da Jetson pro desktop
+#   ./sync_jetson.sh onnx                          # manda logs/onnx/*.onnx (TensorRT é compilado lá)
 
 set -euo pipefail
 
@@ -74,6 +75,16 @@ cmd_all() {
     cmd_ckpt "$@"
 }
 
+cmd_onnx() {
+    # Manda os modelos exportados (export_onnx.py) — os motores TensorRT são
+    # compilados lá, com build_trt_engines.sh (o motor é específico da GPU).
+    ls logs/onnx/*.onnx >/dev/null 2>&1 || { echo "Nenhum .onnx em logs/onnx (rodar: python export_onnx.py --all)" >&2; return 1; }
+    echo "Enviando logs/onnx/*.onnx ($(du -sh logs/onnx | cut -f1))..."
+    ssh "$JETSON_HOST" "mkdir -p $JETSON_DIR/logs/onnx"
+    scp logs/onnx/*.onnx "$JETSON_HOST:$JETSON_DIR/logs/onnx/"
+    echo "OK — ONNX prontos na Jetson (próximo passo lá: bash build_trt_engines.sh)."
+}
+
 cmd_fetch() {
     # Traz os resultados gerados na Jetson (bench_*.csv, preds_*.csv, matrix.log)
     # pra logs/jetson/ no desktop — a fusão/report rodam aqui (ver README seção 16).
@@ -89,8 +100,9 @@ case "${1:-}" in
     hubcache) cmd_hubcache ;;
     all) shift; cmd_all "$@" ;;
     fetch) cmd_fetch ;;
+    onnx) cmd_onnx ;;
     *)
-        echo "Uso: $0 {ckpt <run_name>... | testset | hubcache | all <run_name>... | fetch}" >&2
+        echo "Uso: $0 {ckpt <run_name>... | testset | hubcache | all <run_name>... | onnx | fetch}" >&2
         echo "Exemplo: $0 all bj7_crnn" >&2
         exit 1
         ;;

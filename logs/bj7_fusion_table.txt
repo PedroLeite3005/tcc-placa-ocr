@@ -8,10 +8,13 @@ Modelo   | HR fusion | LR fusion | Tracks
 ---------|-----------|-----------|-------
 svtr     |   0.0000  |   0.6627  |  3000
 crnn     |   0.0000  |   0.6430  |  3000
-parseq   |   0.0000  |   0.6827  |  3000
+parseq   |   0.0000  |   0.6290  |  3000
 
-Fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):
-  Acuracia por track: 0.7177 (3000 tracks em comum)
+Ensemble / fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):
+  svtr+crnn            acuracia por track: 0.6823 (3000 tracks em comum)
+  svtr+parseq          acuracia por track: 0.6883 (3000 tracks em comum)
+  crnn+parseq          acuracia por track: 0.6673 (3000 tracks em comum)
+  svtr+crnn+parseq     acuracia por track: 0.7010 (3000 tracks em comum)
 
 == MVCP (Voto Majoritario por Caractere/Posicao, peso = conf_chars[pos]) ==
 
@@ -19,9 +22,12 @@ Modelo   | HR fusion | LR fusion | Tracks
 ---------|-----------|-----------|-------
 svtr     |   0.0000  |   0.6937  |  3000
 crnn     |   0.0000  |   0.6693  |  3000
-parseq   |   0.0000  |   0.7043  |  3000
+parseq   |   0.0000  |   0.6767  |  3000
 
-Fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):
-  Acuracia por track: 0.7323 (3000 tracks em comum)
+Ensemble / fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):
+  svtr+crnn            acuracia por track: 0.7023 (3000 tracks em comum)
+  svtr+parseq          acuracia por track: 0.7087 (3000 tracks em comum)
+  crnn+parseq          acuracia por track: 0.6887 (3000 tracks em comum)
+  svtr+crnn+parseq     acuracia por track: 0.7220 (3000 tracks em comum)
 
 ================================================================================

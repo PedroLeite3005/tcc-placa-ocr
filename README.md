@@ -826,7 +826,7 @@ No desktop, os mesmos comandos rodam trocando `--hardware desktop` (ou deixando 
 
 Cada execução imprime `seq_acc`, `char_acc`, `fps`, `avg_latency_ms` e pico de memória, e **adiciona** uma linha em `--out-csv` (não sobrescreve — várias execuções acumulam no mesmo arquivo, permitindo comparar desktop × Jetson lado a lado).
 
-**Especificidade do PARSeq — resolução do checkpoint:** `parseq/infer.py` tem `--img-h`/`--img-w` (padrão `64`/`256`, batendo com o padrão atual de treino). Isso precisa bater exatamente com a resolução usada no treino do checkpoint carregado, senão dá erro de shape no `pos_embed` ao carregar o `state_dict`. **O `logs/bj7_parseq/bj7_parseq_best.pt` atual foi treinado com o padrão antigo do hub (32×128), antes do fix de resolução da seção de fairness dos modelos — para testá-lo hoje é preciso passar `--img-h 32 --img-w 128`; para gerar um checkpoint compatível com o padrão atual (64×256), o PARSeq precisa ser retreinado (já listado em pendências).**
+**Especificidade do PARSeq — resolução do checkpoint:** `parseq/infer.py` tem `--img-h`/`--img-w` (padrão `64`/`256`, batendo com o padrão atual de treino). Isso precisa bater exatamente com a resolução usada no treino do checkpoint carregado, senão dá erro de shape no `pos_embed` ao carregar o `state_dict`. **Existem dois PARSeq em cor:** `logs/bj7_parseq_legado/` (modelo antigo, 32×128 — a resolução nativa do PARSeq; passar `--img-h 32 --img-w 128`) e `logs/bj7_parseq/` (retreinado em 64×256, mesma resolução do CRNN/SVTR; usa o padrão). Os dois são comparados no artigo — ver seção 16.6. **Atenção:** nas matrizes `logs/jetson/` e `logs/jetson_v2/`, o run chamado `bj7_parseq` ainda era o legado 32×128 (a renomeação veio depois).
 
 ### 14.6 Métricas coletadas
 
@@ -843,7 +843,7 @@ Comandos completos (smoke test + split inteiro, cor e binarizado, nos 3 modelos)
 
 ### 14.7 Pendências
 
-- Retreinar PARSeq **em cor** no BJ7 com o `img_size=(64,256)` atual (checkpoint em cor hoje ainda é o legado em 32×128 — ver nota na seção 14.5). O binarizado (`parseq_bin`) já foi treinado com o padrão atual.
+- Medir na Jetson o PARSeq retreinado em 64×256 contra o legado em 32×128 (seção 16.6).
 - Validar os resultados binarizados (CRNN/SVTR) num split maior — os primeiros smoke tests (20 imagens) mostraram acurácia bem mais baixa que em cor, mas a amostra é pequena demais pra confirmar se é efeito real da binarização ou ruído.
 - Rodar a matriz de compressão/fusão/ensemble na Jetson (seção 16) e consolidar com `report.py`.
 - MobileNet + distillation (exige retreino) — próxima etapa.
@@ -858,7 +858,7 @@ source /mnt/ssd/projeto-tcc2/venv/bin/activate
 export OPENBLAS_CORETYPE=ARMV8
 ```
 
-Checkpoints usados: `bj7_{modelo}` (cor) e `bj7_{modelo}_bin` (binarizado — grayscale + Otsu, ver seção 14.3). `parseq_bin` foi treinado já com `img_size=(64,256)` (o padrão atual) — por isso não precisa de `--img-h`/`--img-w` como o `bj7_parseq` legado.
+Checkpoints usados: `bj7_{modelo}` (cor) e `bj7_{modelo}_bin` (binarizado — grayscale + Otsu, ver seção 14.3). `bj7_parseq` e `bj7_parseq_bin` usam 64×256 (padrão, sem `--img-h`/`--img-w`); só o `bj7_parseq_legado` (32×128) precisa de `--img-h 32 --img-w 128`.
 
 ### 15.1 Smoke test (`--limit 20`, rápido — valida que tudo importa/roda)
 
@@ -875,8 +875,11 @@ python3 -m svtr.infer --ckpt logs/bj7_svtr/bj7_svtr_best.pt --dataset bj7 --spli
 # SVTR — binarizado
 python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --binarize --out-csv logs/bench_svtr_bin_jetson_smoke.csv
 
-# PARSeq — cor (checkpoint legado, resolução 32x128 — ver seção 14.5)
-python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_smoke.csv
+# PARSeq — cor, 64x256 (retreinado)
+python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --out-csv logs/bench_parseq_jetson_smoke.csv
+
+# PARSeq — cor, 32x128 (legado)
+python3 -m parseq.infer --ckpt logs/bj7_parseq_legado/bj7_parseq_legado_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_legado_jetson_smoke.csv
 
 # PARSeq — binarizado
 python3 -m parseq.infer --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --limit 20 --device cuda --binarize --out-csv logs/bench_parseq_bin_jetson_smoke.csv
@@ -897,8 +900,11 @@ python3 -m svtr.infer --ckpt logs/bj7_svtr/bj7_svtr_best.pt --dataset bj7 --spli
 # SVTR — binarizado
 python3 -m svtr.infer --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --binarize --out-csv logs/bench_svtr_bin_jetson_full.csv
 
-# PARSeq — cor (checkpoint legado, resolução 32x128)
-python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_jetson_full.csv
+# PARSeq — cor, 64x256 (retreinado)
+python3 -m parseq.infer --ckpt logs/bj7_parseq/bj7_parseq_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --out-csv logs/bench_parseq_jetson_full.csv
+
+# PARSeq — cor, 32x128 (legado)
+python3 -m parseq.infer --ckpt logs/bj7_parseq_legado/bj7_parseq_legado_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --img-h 32 --img-w 128 --out-csv logs/bench_parseq_legado_jetson_full.csv
 
 # PARSeq — binarizado
 python3 -m parseq.infer --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --dataset bj7 --split testing --hardware jetson --batch-size 1 --device cuda --binarize --out-csv logs/bench_parseq_bin_jetson_full.csv
@@ -949,7 +955,7 @@ Ganhos de FPS "de graça" (não são compressão, mas entram no baseline):
 ```bash
 python prune_model.py --model crnn   --ckpt logs/bj7_crnn/bj7_crnn_best.pt                       --amount 0.3 0.5 0.7
 python prune_model.py --model svtr   --ckpt logs/bj7_svtr/bj7_svtr_best.pt                       --amount 0.3 0.5 0.7
-python prune_model.py --model parseq --ckpt logs/bj7_parseq/bj7_parseq_best.pt --img-h 32 --img-w 128 --amount 0.3 0.5 0.7
+python prune_model.py --model parseq --ckpt logs/bj7_parseq_legado/bj7_parseq_legado_best.pt --img-h 32 --img-w 128 --amount 0.3 0.5 0.7
 python prune_model.py --model crnn   --ckpt logs/bj7_crnn_bin/bj7_crnn_bin_best.pt   --binarize  --amount 0.3 0.5 0.7
 python prune_model.py --model svtr   --ckpt logs/bj7_svtr_bin/bj7_svtr_bin_best.pt   --binarize  --amount 0.3 0.5 0.7
 python prune_model.py --model parseq --ckpt logs/bj7_parseq_bin/bj7_parseq_bin_best.pt --binarize --amount 0.3 0.5 0.7
@@ -979,7 +985,7 @@ tail -f logs/jetson/matrix.log        # Ctrl+C só sai do tail; a matriz continu
 
 [`run_bench_matrix.sh`](run_bench_matrix.sh) roda todo checkpoint em `logs/bj7_*/` × `none/fp16/int8` (podados só `none`) × PARSeq `ar/nar/nar1`, gravando tudo em `logs/jetson/bench_all.csv` e as predições em `logs/jetson/preds_<run>_<modo>.csv` — no mesmo passe cronometrado, sem segunda passada. Com `nohup`, pode fechar o SSH/desligar o desktop. Se cair no meio, rodar de novo retoma (pula o que já tem `preds_*.csv`).
 
-Variáveis úteis: `LIMIT=200` (smoke test da matriz), `INT8_LIMIT=1000` (padrão — INT8 roda na CPU e é lento; vazio = split inteiro), `MODES="none fp16"`, `PARSEQ_DECODES="nar1"`, `PARSEQ_LEGACY=1` (padrão: `bj7_parseq` em cor usa a resolução legada 32×128).
+Variáveis úteis: `LIMIT=200` (smoke test da matriz), `INT8_LIMIT=1000` (padrão — INT8 roda na CPU e é lento; vazio = split inteiro), `MODES="none fp16"`, `PARSEQ_DECODES="nar1"`, `ONLY="bj7_parseq bj7_parseq_legado"` (roda só esses runs), `SKIP_PRUNED=1`, `COOLDOWN_C=55` (espera esfriar abaixo de 55°C antes de cada run). Runs com `_legado` no nome rodam automaticamente em 32×128.
 
 ### 16.4 Fusão + ensemble + relatório (desktop)
 
@@ -1014,6 +1020,115 @@ python report.py --bench logs/jetson/bench_all.csv \
 ### 16.5 Próxima etapa (fora deste escopo)
 
 **MobileNet + distillation**: backbone leve (ex: MobileNetV3-small no lugar da CNN do CRNN, mesma cabeça BiLSTM+CTC) treinado imitando o SVTR/PARSeq. Exige retreino no desktop.
+
+### 16.6 PARSeq: resolução de entrada 32×128 × 64×256
+
+O PARSeq foi projetado pra 32×128. Retreinado em 64×256 (a mesma resolução do CRNN/SVTR), ficou **pior em acurácia** (teste no desktop: 53,3% → 45,0%) e deve ficar **bem mais lento** (4× mais patches no transformer). Os dois são comparados no artigo como resultado: resolução de entrada × acurácia × FPS.
+
+| Run | Resolução | Flags |
+|---|---|---|
+| `bj7_parseq_legado` | 32×128 (nativa do PARSeq) | `--img-h 32 --img-w 128` |
+| `bj7_parseq` | 64×256 (igual CRNN/SVTR) | — (padrão) |
+
+Os comandos pra medir os dois na Jetson estão no roteiro da seção 16.8 (rodam junto com o TensorRT).
+
+### 16.7 TensorRT — a técnica que de fato sobe o FPS
+
+**Por que FP16 e pruning não subiram o FPS:** com batch 1, o gargalo não é a conta na GPU — é o PyTorch disparando centenas de operações, uma por uma, a partir da CPU fraca da Jetson. Deixar a conta mais leve não ajuda. O FP16 mostrou isso: mesma acurácia, FPS igual.
+
+**O que o TensorRT faz:** é o otimizador oficial da NVIDIA (vem no JetPack; 8.2.1 na Jetson). Compila o modelo num "motor" pra GPU específica: funde camadas (ex: Conv+BatchNorm+ReLU numa operação só), roda o grafo inteiro de uma vez — sem o disparo operação por operação — e escolhe os kernels mais rápidos, com FP16 de verdade. Não precisa retreinar: usa os mesmos checkpoints. Na literatura, 2,1× a 6× sobre o PyTorch na Jetson Nano ([arXiv 2406.17749](https://arxiv.org/pdf/2406.17749); [NVIDIA GTC 2020](https://developer.download.nvidia.com/video/gputechconf/gtc/2020/presentations/s22676-developing-real-time-neural-networks-for-jetson.pdf): ResNet-18 30 FPS PyTorch → 91 FPS TensorRT FP16). Na Nano não há INT8 nem no TensorRT (GPU Maxwell) — só FP32 e FP16.
+
+**Fluxo:**
+1. **Desktop** — [`export_onnx.py`](export_onnx.py) converte os checkpoints pra ONNX (opset 13, o máximo do TensorRT 8.2) e valida cada um contra o PyTorch. No PARSeq, dois ajustes só na exportação (atenção "fundida" do timm desligada e `torch.triu` trocado por uma versão equivalente com operações básicas), porque essas operações não existem no opset 13; cada modo de decodificação (ar/nar/nar1) vira um ONNX separado.
+2. **Jetson** — [`build_trt_engines.sh`](build_trt_engines.sh) compila cada ONNX com o `trtexec` em motores FP16 e FP32 (`logs/trt/<nome>_<fp16|fp32>.engine`). Tem que ser lá: o motor é específico da GPU.
+3. **Jetson** — os `infer.py` rodam o motor com `--compress trt_fp16 --trt-engine <arquivo>` (via [`trt_runner.py`](trt_runner.py)). CSV, fusão e relatório funcionam igual. A matriz acha os motores sozinha pelo nome (`MODES="trt_fp16 trt_fp32"`).
+
+**Validação no desktop** (TensorRT 11, motor FP32, 300 imagens): previsões **idênticas** ao PyTorch em 300/300 imagens nos dois modelos testados.
+
+| Modelo | PyTorch | TensorRT |
+|---|---|---|
+| CRNN | 112 FPS | 145 FPS (+29%) |
+| PARSeq legado NAR+1 | 88 FPS | 508 FPS (5,8×) |
+
+Exportação no desktop: os 13 modelos base (CRNN, SVTR, binarizados e os 3 PARSeq × ar/nar/nar1) exportaram e validaram contra o PyTorch (diferença máxima 5e-4).
+
+Observações:
+- O motor tem **batch e resolução fixos** (batch 1, mesma resolução do ONNX).
+- `peak_gpu_mem_mb` com TensorRT soma a memória que o motor aloca por fora do PyTorch (área de trabalho + pesos), senão sairia quase zero.
+- Riscos conhecidos de conversão no TensorRT 8.2: LSTM bidirecional (CRNN) e algumas operações do decoder do PARSeq. Se algum motor falhar, a causa fica em `logs/trt/<nome>_<prec>.log` e a matriz simplesmente pula aquele modelo.
+
+### 16.8 Roteiro da próxima rodada na Jetson (PARSeq 32×128 × 64×256 + TensorRT)
+
+**1. Desktop** — exportar os ONNX (se ainda não exportou) e commit + push do código:
+
+```bash
+python export_onnx.py --all
+git add -A && git commit -m "TensorRT + PARSeq em duas resolucoes" && git push
+```
+
+**2. Jetson** — atualizar o código e renomear o PARSeq legado (lá ele ainda está em `logs/bj7_parseq/` com o nome antigo). O `mv` da `jetson_v2` é porque ela foi commitada a partir do desktop e existe solta na Jetson — sem isso o `git pull` recusa sobrescrever. **Fazer este passo antes do 3**: o 3 manda o PARSeq novo pra `logs/bj7_parseq/` e sobrescreveria o legado.
+
+```bash
+cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
+mv logs/jetson_v2 logs/jetson_v2_backup
+git pull
+mkdir -p logs/bj7_parseq_legado
+mv logs/bj7_parseq/bj7_parseq_best.pt logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+for a in 30 50 70; do mkdir -p logs/bj7_parseq_legado_prune$a && mv logs/bj7_parseq_prune$a/bj7_parseq_prune${a}_best.pt logs/bj7_parseq_legado_prune$a/bj7_parseq_legado_prune${a}_best.pt && rmdir logs/bj7_parseq_prune$a; done
+```
+
+(Se o legado já tiver sido sobrescrito lá, mandar do desktop: `./sync_jetson.sh ckpt bj7_parseq_legado bj7_parseq_legado_prune30 bj7_parseq_legado_prune50 bj7_parseq_legado_prune70`.)
+
+**3. Desktop (Git Bash)** — mandar o PARSeq novo e os ONNX:
+
+```bash
+export JETSON_HOST=pedrobastos@100.72.163.58
+./sync_jetson.sh ckpt bj7_parseq        # PARSeq novo, 64x256
+./sync_jetson.sh onnx                   # os 13 ONNX (~320MB)
+```
+
+**4. Jetson** — compilar os motores TensorRT (26 compilações: 13 ONNX × FP16/FP32; pode levar algumas horas — pra ir mais rápido, `PRECISIONS="fp16"`). Não rodar benchmark ao mesmo tempo:
+
+```bash
+mkdir -p logs/trt
+nohup bash build_trt_engines.sh > logs/trt/build.log 2>&1 &
+tail -f logs/trt/build.log      # cada linha OK já mostra uma prévia do throughput
+```
+
+Conferir quais motores saíram: `ls logs/trt/*.engine` (e `grep -A5 FALHOU logs/trt/build.log` pros que falharam).
+
+**5. Jetson** — quando o build terminar, a matriz: os dois PARSeq em PyTorch (none/fp16) + todos os modelos base em TensorRT:
+
+```bash
+sudo jetson_clocks
+echo 0   | sudo tee /sys/devices/pwm-fan/temp_control
+echo 255 | sudo tee /sys/devices/pwm-fan/target_pwm
+mkdir -p logs/jetson_v3
+nohup bash -c '
+  export COOLDOWN_C=55 OUT_DIR=logs/jetson_v3 SKIP_PRUNED=1
+  ONLY="bj7_parseq bj7_parseq_legado" MODES="none fp16" bash run_bench_matrix.sh
+  MODES="trt_fp16 trt_fp32" bash run_bench_matrix.sh
+' > logs/jetson_v3/matrix.log 2>&1 &
+```
+
+Acompanhar: `tail -f logs/jetson_v3/matrix.log`. No fim ele imprime `ok=… falhas=… pulados=…` (pulados = motor que não existe).
+
+**6. Desktop** — trazer os resultados, fundir e gerar o relatório (exemplo com TensorRT FP16; trocar o sufixo pra `trt_fp32`, ou `none_nar1` com `parseq_legado` etc.):
+
+```bash
+mkdir -p logs/jetson_v3
+scp "pedrobastos@100.72.163.58:/mnt/ssd/projeto-tcc2/tcc-placa-ocr/logs/jetson_v3/*" logs/jetson_v3/
+
+python fusion.py --preds \
+    crnn=logs/jetson_v3/preds_bj7_crnn_trt_fp16.csv \
+    svtr=logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv \
+    parseq=logs/jetson_v3/preds_bj7_parseq_legado_trt_fp16_nar1.csv \
+    --out logs/jetson_v3/fusion_trt_fp16.txt --out-csv logs/jetson_v3/fusion_trt_fp16.csv
+
+python report.py --bench logs/jetson_v3/bench_all.csv \
+    --fusion logs/jetson_v3/fusion_trt_fp16.csv \
+    --out-csv logs/jetson_v3/report.csv
+```
 
 ---
 

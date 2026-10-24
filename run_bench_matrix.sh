@@ -17,14 +17,22 @@
 #   MODES="none fp16"    padrão sem int8: o PyTorch da Jetson não tem motor de quantização
 #                        (erro NoQEngine) — "int8" só funciona no desktop
 #   INT8_LIMIT=1000      limite só pro INT8, se incluído em MODES (roda na CPU, é lento)
+#                        TensorRT: incluir "trt_fp16" e/ou "trt_fp32" em MODES. O motor é
+#                        procurado em $TRT_DIR/<run>[_<decode>]_<fp16|fp32>.engine (gerado
+#                        por build_trt_engines.sh); se não existir, o run é pulado.
+#   TRT_DIR=logs/trt
 #   PARSEQ_DECODES="ar nar nar1"   ar=autoregressivo | nar=paralelo sem refino | nar1=paralelo + 1 refino
-#   PARSEQ_LEGACY=1      bj7_parseq em cor (e seus podados) usam --img-h 32 --img-w 128
+#   ONLY="bj7_parseq bj7_parseq_legado"   roda só esses runs (nomes das pastas em logs/)
 #   SKIP_PRUNED=1        pula os checkpoints podados (pruning não muda FPS)
 #   COOLDOWN_C=55        espera a placa esfriar abaixo de N °C antes de cada run, pra todos
 #                        começarem nas mesmas condições térmicas (vazio = não espera)
 #   HARDWARE=jetson      (padrão: autodetecta)
 #   SKIP_DONE=1          pula runs cujo preds_*.csv já existe (permite retomar)
 #   OUT_DIR=logs/jetson
+#
+# Resolução do PARSeq: runs com "_legado" no nome (bj7_parseq_legado e seus
+# podados) são o modelo antigo em 32×128 e rodam com --img-h 32 --img-w 128;
+# os demais (bj7_parseq, bj7_parseq_bin) usam o padrão 64×256.
 
 set -u
 
@@ -33,9 +41,10 @@ LIMIT="${LIMIT:-}"
 INT8_LIMIT="${INT8_LIMIT-1000}"
 MODES="${MODES:-none fp16}"
 PARSEQ_DECODES="${PARSEQ_DECODES:-ar nar nar1}"
-PARSEQ_LEGACY="${PARSEQ_LEGACY:-1}"
+ONLY="${ONLY:-}"
 SKIP_PRUNED="${SKIP_PRUNED:-0}"
 COOLDOWN_C="${COOLDOWN_C:-}"
+TRT_DIR="${TRT_DIR:-logs/trt}"
 SKIP_DONE="${SKIP_DONE:-1}"
 VENV="${VENV:-/mnt/ssd/projeto-tcc2/venv}"
 
@@ -67,7 +76,7 @@ wait_cool() {
 
 command -v nvpmodel >/dev/null 2>&1 && echo "Modo de energia: $(nvpmodel -q 2>/dev/null | grep -i 'power mode')"
 [ -r /sys/devices/pwm-fan/target_pwm ] && echo "Ventoinha (target_pwm 0-255): $(cat /sys/devices/pwm-fan/target_pwm)"
-echo "Início: $(date) | OUT_DIR=$OUT_DIR | LIMIT=${LIMIT:-todos} | MODES=$MODES | SKIP_PRUNED=$SKIP_PRUNED | COOLDOWN_C=${COOLDOWN_C:-desligado}"
+echo "Início: $(date) | OUT_DIR=$OUT_DIR | LIMIT=${LIMIT:-todos} | MODES=$MODES | ONLY=${ONLY:-todos} | SKIP_PRUNED=$SKIP_PRUNED | COOLDOWN_C=${COOLDOWN_C:-desligado}"
 
 n_ok=0; n_fail=0; n_skip=0
 for ckpt in logs/bj7_*/bj7_*_best.pt; do
@@ -76,12 +85,13 @@ for ckpt in logs/bj7_*/bj7_*_best.pt; do
     model="$(echo "$run" | cut -d_ -f2)"            # crnn | svtr | parseq
     case "$model" in crnn|svtr|parseq) ;; *) continue ;; esac
     [ "$SKIP_PRUNED" = "1" ] && [[ "$run" == *_prune* ]] && continue
+    if [ -n "$ONLY" ] && [[ " $ONLY " != *" $run "* ]]; then
+        continue
+    fi
 
     extra=()
     [[ "$run" == *_bin* ]] && extra+=(--binarize)
-    if [ "$model" = "parseq" ] && [ "$PARSEQ_LEGACY" = "1" ] && [[ "$run" != *_bin* ]]; then
-        extra+=(--img-h 32 --img-w 128)
-    fi
+    [[ "$run" == *_legado* ]] && extra+=(--img-h 32 --img-w 128)
 
     # Checkpoint podado: a compressão já está nele — roda só "none".
     modes="$MODES"
@@ -109,11 +119,25 @@ for ckpt in logs/bj7_*/bj7_*_best.pt; do
             lim_args=()
             [ -n "$lim" ] && lim_args=(--limit "$lim")
 
+            # TensorRT: motor com o mesmo nome do ONNX (run [+ decodificação do PARSeq]).
+            trt_args=()
+            if [[ "$mode" == trt_* ]]; then
+                prec="${mode#trt_}"
+                ename="$run"
+                [ "$dec" != "ctc" ] && ename="${run}_${dec}"
+                engine="$TRT_DIR/${ename}_${prec}.engine"
+                if [ ! -f "$engine" ]; then
+                    echo "[skip] $tag (sem motor $engine — rodar build_trt_engines.sh)"
+                    n_skip=$((n_skip + 1)); continue
+                fi
+                trt_args=(--trt-engine "$engine")
+            fi
+
             wait_cool
             echo "=== $(date +%H:%M:%S) $tag ($(max_temp_c)°C) ==="
             if python3 -m "$model.infer" --ckpt "$ckpt" --dataset bj7 --split testing \
                 --batch-size 1 --device cuda --compress "$mode" \
-                "${extra[@]}" "${dec_args[@]}" "${lim_args[@]}" "${HW_ARGS[@]}" \
+                "${extra[@]}" "${dec_args[@]}" "${lim_args[@]}" "${HW_ARGS[@]}" "${trt_args[@]}" \
                 --out-csv "$BENCH" --dump-preds "$preds"; then
                 n_ok=$((n_ok + 1))
             else

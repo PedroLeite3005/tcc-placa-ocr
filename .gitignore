@@ -22,3 +22,8 @@ rodosol/
 
 # Checkpoints (pesados) — nunca versionar; transferir via rsync/scp (ver sync_jetson.sh)
 logs/**/*.pt
+
+# Modelos exportados (ONNX) e motores TensorRT — gerados por export_onnx.py /
+# build_trt_engines.sh; os motores só servem na GPU onde foram compilados
+logs/onnx/
+logs/trt/*.engine

@@ -79,11 +79,15 @@ def reset_peak_memory(device: torch.device) -> None:
         torch.cuda.reset_peak_memory_stats(device)
 
 
-def gpu_memory_mb(device: torch.device) -> Optional[float]:
-    """Pico de memória alocada pelo PyTorch no device, em MB (None se não for CUDA)."""
+def gpu_memory_mb(device: torch.device, model=None) -> Optional[float]:
+    """Pico de memória alocada pelo PyTorch no device, em MB (None se não for CUDA).
+
+    Com motor TensorRT (`model.gpu_mem_mb`), soma a memória que ele aloca por
+    fora do PyTorch — senão a métrica sairia quase zero.
+    """
     if device.type != "cuda":
         return None
-    return torch.cuda.max_memory_allocated(device) / (1024 ** 2)
+    return torch.cuda.max_memory_allocated(device) / (1024 ** 2) + getattr(model, "gpu_mem_mb", 0.0)
 
 
 def fmt_opt(x: Optional[float], spec: str = ".4f") -> str:

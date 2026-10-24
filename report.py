@@ -55,7 +55,12 @@ def _load_bench(paths):
 
 
 def _config_name(row):
-    """Ex: crnn, svtr_bin, crnn_prune30 — binarização e pruning visíveis no nome."""
+    """Nome da config a partir da pasta do checkpoint (ex: parseq_legado, crnn_bin_prune30);
+    sem a coluna `ckpt` (CSVs antigos), reconstrói a partir de model/binarize/sparsity."""
+    ckpt = row.get("ckpt", "")
+    if ckpt:
+        run = Path(ckpt).parent.name
+        return run[4:] if run.startswith("bj7_") else run
     name = row.get("model", "")
     if str(row.get("binarize", "")).lower() == "true":
         name += "_bin"

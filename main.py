@@ -19,7 +19,7 @@ _DATA_ROOTS = {
 _DATASETS = ["bj7"]
 # "svtr","parseq","crnn"
 _MODELS = ["parseq"]
-_BINARIZE = True  # True = pré-processamento leve (grayscale + binarização Otsu, 1 canal real) em vez de RGB.
+_BINARIZE = False  # True = pré-processamento leve (grayscale + binarização Otsu, 1 canal real) em vez de RGB.
 
 def obter_parametros(model: str, dataset: str, binarize: bool = False) -> SimpleNamespace:
     """Valores padrão do run; altere aqui quando precisar mudar."""

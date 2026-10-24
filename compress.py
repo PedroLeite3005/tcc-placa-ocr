@@ -1,17 +1,20 @@
-"""Compressão de modelos já treinados — FP16, quantização INT8 dinâmica e pruning.
+"""Compressão/otimização de modelos já treinados — FP16, INT8, pruning e TensorRT.
 
-Usado pelos `*/infer.py` (FP16/INT8, aplicados na carga do checkpoint) e pelo
-`prune_model.py` (pruning, que gera um checkpoint novo). Compatível com Python
-3.6 (roda na Jetson).
+Usado pelos `*/infer.py` (FP16/INT8/TensorRT, aplicados na carga do checkpoint)
+e pelo `prune_model.py` (pruning, que gera um checkpoint novo). Compatível com
+Python 3.6 (roda na Jetson).
 
-Limitações de hardware relevantes pra interpretar os resultados:
-- INT8 (`quantize_dynamic`) só roda na CPU: a GPU da Jetson Nano (Maxwell,
-  compute 5.3) não tem instruções INT8. Esperado: modelo menor, FPS menor que
-  FP32 na GPU.
-- Pruning não-estruturado zera pesos mas mantém as matrizes densas: não acelera
-  a GPU. O ganho aparece no tamanho comprimido (`model_size_gz_mb`).
-- FP16 é a técnica que de fato deve subir FPS (a GPU da Nano tem FP16 com
-  throughput dobrado).
+O que os benchmarks na Jetson Nano mostraram:
+- FP16 (PyTorch): acurácia igual e modelo pela metade, mas FPS praticamente
+  igual — com batch 1 o gargalo é o custo de disparar cada operação a partir
+  da CPU, não a conta na GPU.
+- INT8 (`quantize_dynamic`): não roda na Jetson — o PyTorch da NVIDIA veio sem
+  motor de quantização (NoQEngine) e a GPU Maxwell não tem INT8.
+- Pruning não-estruturado: zera pesos mas as matrizes continuam densas — não
+  acelera. Ganho no tamanho comprimido (`model_size_gz_mb`).
+- TensorRT (`trt_fp16`/`trt_fp32`): compila o modelo num motor otimizado pra
+  GPU (funde camadas, roda o grafo inteiro de uma vez, escolhe kernels). Ataca
+  justamente o gargalo de disparo de operações. Ver `trt_runner.py`.
 """
 
 import gzip
@@ -22,7 +25,7 @@ from typing import List, Sequence, Tuple
 import torch
 import torch.nn as nn
 
-COMPRESS_MODES = ("none", "fp16", "int8")
+COMPRESS_MODES = ("none", "fp16", "int8", "trt_fp16", "trt_fp32")
 
 
 def _set_quant_engine() -> None:
@@ -34,16 +37,32 @@ def _set_quant_engine() -> None:
 
 
 def apply_compression(
-    model: nn.Module, mode: str, device: torch.device, int8_exclude: Sequence[str] = ()
+    model: nn.Module, mode: str, device: torch.device, int8_exclude: Sequence[str] = (),
+    trt_engine=None,
 ) -> Tuple[nn.Module, torch.device, torch.dtype]:
-    """Aplica `mode` (none | fp16 | int8) e retorna (modelo, device, dtype da entrada).
+    """Aplica `mode` (none | fp16 | int8 | trt_fp16 | trt_fp32) e retorna
+    (modelo, device, dtype da entrada).
 
-    INT8 força CPU (ver docstring do módulo). FP16 exige CUDA.
+    INT8 força CPU (ver docstring do módulo). FP16 e TensorRT exigem CUDA.
     `int8_exclude`: caminhos de submódulos (ex: "model.head") que ficam em FP32
     — o `qconfig = None` explícito tem precedência no `quantize_dynamic`.
+    `trt_engine`: caminho do .engine (obrigatório nos modos trt_*). O modelo
+    PyTorch sai da GPU (só o tokenizer do PARSeq é reaproveitado).
     """
     if mode == "none":
         return model, device, torch.float32
+    if mode.startswith("trt_"):
+        if trt_engine is None:
+            raise ValueError("--compress {} requer --trt-engine <arquivo .engine>.".format(mode))
+        from trt_runner import TRTModule
+
+        trt_model = TRTModule(trt_engine, device)
+        if hasattr(model, "tokenizer"):
+            trt_model.tokenizer = model.tokenizer
+        model.to(torch.device("cpu"))
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        return trt_model, device, torch.float32
     if mode == "fp16":
         if device.type != "cuda":
             raise ValueError("--compress fp16 requer --device cuda.")
@@ -112,6 +131,8 @@ def sparsity(model: nn.Module) -> float:
 
 
 def _serialized_bytes(model: nn.Module) -> bytes:
+    if hasattr(model, "engine_bytes"):  # TRTModule: tamanho do motor TensorRT
+        return model.engine_bytes
     buf = io.BytesIO()
     torch.save(model.state_dict(), buf)
     return buf.getvalue()
