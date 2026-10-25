@@ -1,0 +1,226 @@
+nohup: ignoring input
+Modo de energia: NV Power Mode: MAXN
+Ventoinha (target_pwm 0-255): 255
+Início: sáb out 24 19:32:34 -03 2026 | OUT_DIR=logs/jetson_v3 | LIMIT=todos | MODES=none fp16 | ONLY=bj7_parseq bj7_parseq_legado | SKIP_PRUNED=1 | COOLDOWN_C=55
+[skip] bj7_parseq_none_ar (já existe)
+[skip] bj7_parseq_none_nar (já existe)
+[skip] bj7_parseq_none_nar1 (já existe)
+[cooldown] 57°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 19:36:54 bj7_parseq_fp16_ar (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,091,871 | esparsidade: 0.00% | tamanho: 11.7MB (10.8MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4490 | char_acc=0.8255 | fps=5.92 | avg_latency=168.85ms | peak_gpu_mem=39.119140625 | avg_temp=84.6C | avg_power=7.9W | energy=5.7649Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_fp16_ar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 55°C
+=== 20:52:03 bj7_parseq_fp16_nar (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,091,871 | esparsidade: 0.00% | tamanho: 11.7MB (10.8MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4153 | char_acc=0.8154 | fps=9.26 | avg_latency=108.04ms | peak_gpu_mem=39.119140625 | avg_temp=85.8C | avg_power=8.5W | energy=4.0516Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_fp16_nar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 55°C
+=== 21:51:15 bj7_parseq_fp16_nar1 (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq/bj7_parseq_best.pt
+PARSeq — parâmetros: 6,091,871 | esparsidade: 0.00% | tamanho: 11.7MB (10.8MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.4468 | char_acc=0.8253 | fps=8.98 | avg_latency=111.37ms | peak_gpu_mem=39.119140625 | avg_temp=86.2C | avg_power=8.4W | energy=4.1502Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_fp16_nar1.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 22:53:18 bj7_parseq_legado_none_ar (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5331 | char_acc=0.8629 | fps=9.44 | avg_latency=105.91ms | peak_gpu_mem=47.1376953125 | avg_temp=68.2C | avg_power=5.7W | energy=2.6176Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_none_ar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 80°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 23:50:48 bj7_parseq_legado_none_nar (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5057 | char_acc=0.8055 | fps=23.75 | avg_latency=42.11ms | peak_gpu_mem=47.1376953125 | avg_temp=67.3C | avg_power=6.5W | energy=1.2465Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_none_nar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 82°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 00:33:19 bj7_parseq_legado_none_nar1 (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: none | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 23.0MB (21.4MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5325 | char_acc=0.8627 | fps=19.76 | avg_latency=50.60ms | peak_gpu_mem=47.1376953125 | avg_temp=67.8C | avg_power=6.3W | energy=1.4405Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 82°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 01:21:37 bj7_parseq_legado_fp16_ar (56°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: ar_r1
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5334 | char_acc=0.8629 | fps=9.54 | avg_latency=104.81ms | peak_gpu_mem=35.064453125 | avg_temp=67.9C | avg_power=5.6W | energy=2.5443Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_fp16_ar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 80°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 02:24:19 bj7_parseq_legado_fp16_nar (55°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r0
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5055 | char_acc=0.8052 | fps=23.65 | avg_latency=42.28ms | peak_gpu_mem=35.064453125 | avg_temp=66.0C | avg_power=6.2W | energy=1.2028Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_fp16_nar.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 79°C — esperando baixar de 55°C...
+[cooldown] ok: 55°C
+=== 03:01:54 bj7_parseq_legado_fp16_nar1 (55°C) ===
+Using cache found in /home/pedrobastos/.cache/torch/hub/baudm_parseq_main
+Hardware: jetson | device: cuda | compress: fp16 | decode: nar_r1
+Carregando checkpoint: logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
+PARSeq — parâmetros: 6,018,143 | esparsidade: 0.00% | tamanho: 11.5MB (10.6MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5329 | char_acc=0.8628 | fps=19.36 | avg_latency=51.66ms | peak_gpu_mem=35.064453125 | avg_temp=64.6C | avg_power=6.0W | energy=1.3893Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_parseq_legado_fp16_nar1.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+Fim: dom out 25 03:16:17 -03 2026 | ok=9 falhas=0 pulados=3 | resultados em logs/jetson_v3/bench_all.csv
+Modo de energia: NV Power Mode: MAXN
+Ventoinha (target_pwm 0-255): 255
+Início: dom out 25 03:16:17 -03 2026 | OUT_DIR=logs/jetson_v3 | LIMIT=todos | MODES=trt_fp16 trt_fp32 | ONLY=todos | SKIP_PRUNED=1 | COOLDOWN_C=55
+[cooldown] 78°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 03:31:27 bj7_crnn_bin_trt_fp16 (55°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp16
+Carregando checkpoint: logs/bj7_crnn_bin/bj7_crnn_bin_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 0.00% | tamanho: 41.3MB (34.2MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2479 | char_acc=0.6637 | fps=12.24 | avg_latency=81.71ms | peak_gpu_mem=44.02775859832764 | avg_temp=83.8C | avg_power=8.9W | energy=3.1982Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_crnn_bin_trt_fp16.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 55°C
+=== 04:19:43 bj7_crnn_bin_trt_fp32 (55°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp32
+Carregando checkpoint: logs/bj7_crnn_bin/bj7_crnn_bin_best.pt
+CRNN — parâmetros: 7,676,069 | esparsidade: 0.00% | tamanho: 65.1MB (56.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2477 | char_acc=0.6636 | fps=10.94 | avg_latency=91.41ms | peak_gpu_mem=70.21612548828125 | avg_temp=86.1C | avg_power=8.9W | energy=3.5928Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_crnn_bin_trt_fp32.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 05:11:20 bj7_crnn_trt_fp16 (55°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp16
+Carregando checkpoint: logs/bj7_crnn/bj7_crnn_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 0.00% | tamanho: 41.3MB (34.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5070 | char_acc=0.8428 | fps=12.22 | avg_latency=81.86ms | peak_gpu_mem=44.15520095825195 | avg_temp=84.4C | avg_power=8.7W | energy=3.2015Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_crnn_trt_fp16.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 99°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 06:00:53 bj7_crnn_trt_fp32 (55°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp32
+Carregando checkpoint: logs/bj7_crnn/bj7_crnn_best.pt
+CRNN — parâmetros: 7,677,221 | esparsidade: 0.00% | tamanho: 65.1MB (56.5MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5071 | char_acc=0.8429 | fps=10.82 | avg_latency=92.38ms | peak_gpu_mem=70.34552097320557 | avg_temp=86.4C | avg_power=8.8W | energy=3.6348Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_crnn_trt_fp32.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[skip] bj7_parseq_bin_trt_fp16_ar (sem motor logs/trt/bj7_parseq_bin_ar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_bin_trt_fp16_nar (sem motor logs/trt/bj7_parseq_bin_nar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_bin_trt_fp16_nar1 (sem motor logs/trt/bj7_parseq_bin_nar1_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_bin_trt_fp32_ar (sem motor logs/trt/bj7_parseq_bin_ar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_bin_trt_fp32_nar (sem motor logs/trt/bj7_parseq_bin_nar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_bin_trt_fp32_nar1 (sem motor logs/trt/bj7_parseq_bin_nar1_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp16_ar (sem motor logs/trt/bj7_parseq_ar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp16_nar (sem motor logs/trt/bj7_parseq_nar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp16_nar1 (sem motor logs/trt/bj7_parseq_nar1_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp32_ar (sem motor logs/trt/bj7_parseq_ar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp32_nar (sem motor logs/trt/bj7_parseq_nar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_trt_fp32_nar1 (sem motor logs/trt/bj7_parseq_nar1_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp16_ar (sem motor logs/trt/bj7_parseq_legado_ar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp16_nar (sem motor logs/trt/bj7_parseq_legado_nar_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp16_nar1 (sem motor logs/trt/bj7_parseq_legado_nar1_fp16.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp32_ar (sem motor logs/trt/bj7_parseq_legado_ar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp32_nar (sem motor logs/trt/bj7_parseq_legado_nar_fp32.engine — rodar build_trt_engines.sh)
+[skip] bj7_parseq_legado_trt_fp32_nar1 (sem motor logs/trt/bj7_parseq_legado_nar1_fp32.engine — rodar build_trt_engines.sh)
+[cooldown] 98°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 06:53:05 bj7_svtr_bin_trt_fp16 (56°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp16
+Carregando checkpoint: logs/bj7_svtr_bin/bj7_svtr_bin_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 0.00% | tamanho: 29.0MB (24.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2599 | char_acc=0.6710 | fps=25.14 | avg_latency=39.78ms | peak_gpu_mem=48.56328582763672 | avg_temp=75.9C | avg_power=8.9W | energy=1.6545Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_svtr_bin_trt_fp16.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 95°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 07:26:31 bj7_svtr_bin_trt_fp32 (56°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp32
+Carregando checkpoint: logs/bj7_svtr_bin/bj7_svtr_bin_best.pt
+SVTR-Tiny — parâmetros: 3,648,677 | esparsidade: 0.00% | tamanho: 29.8MB (25.0MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.2600 | char_acc=0.6710 | fps=24.32 | avg_latency=41.11ms | peak_gpu_mem=49.8329496383667 | avg_temp=76.0C | avg_power=9.0W | energy=1.7101Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_svtr_bin_trt_fp32.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 95°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 07:59:42 bj7_svtr_trt_fp16 (55°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp16
+Carregando checkpoint: logs/bj7_svtr/bj7_svtr_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 0.00% | tamanho: 29.0MB (24.3MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5168 | char_acc=0.8451 | fps=25.28 | avg_latency=39.56ms | peak_gpu_mem=48.68826675415039 | avg_temp=75.6C | avg_power=8.8W | energy=1.6625Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+[cooldown] 94°C — esperando baixar de 55°C...
+[cooldown] ok: 56°C
+=== 08:32:03 bj7_svtr_trt_fp32 (56°C) ===
+Hardware: jetson | device: cuda | compress: trt_fp32
+Carregando checkpoint: logs/bj7_svtr/bj7_svtr_best.pt
+SVTR-Tiny — parâmetros: 3,649,253 | esparsidade: 0.00% | tamanho: 29.8MB (25.1MB gzip)
+Amostras (testing): 15000
+
+seq_acc=0.5167 | char_acc=0.8452 | fps=24.38 | avg_latency=41.01ms | peak_gpu_mem=49.958895683288574 | avg_temp=77.0C | avg_power=9.0W | energy=1.7355Wh
+Predições salvas em: logs/jetson_v3/preds_bj7_svtr_trt_fp32.csv
+Métricas registradas em: logs/jetson_v3/bench_all.csv
+Fim: dom out 25 08:44:14 -03 2026 | ok=8 falhas=0 pulados=18 | resultados em logs/jetson_v3/bench_all.csv

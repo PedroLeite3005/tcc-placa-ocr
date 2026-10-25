@@ -1,0 +1,115 @@
+&&&& RUNNING TensorRT.trtexec [TensorRT v8201] # /usr/src/tensorrt/bin/trtexec --onnx=logs/onnx/bj7_parseq_legado_nar.onnx --saveEngine=logs/trt/bj7_parseq_legado_nar_fp16.engine --workspace=1024 --fp16
+[10/24/2026-19:14:54] [I] === Model Options ===
+[10/24/2026-19:14:54] [I] Format: ONNX
+[10/24/2026-19:14:54] [I] Model: logs/onnx/bj7_parseq_legado_nar.onnx
+[10/24/2026-19:14:54] [I] Output:
+[10/24/2026-19:14:54] [I] === Build Options ===
+[10/24/2026-19:14:54] [I] Max batch: explicit batch
+[10/24/2026-19:14:54] [I] Workspace: 1024 MiB
+[10/24/2026-19:14:54] [I] minTiming: 1
+[10/24/2026-19:14:54] [I] avgTiming: 8
+[10/24/2026-19:14:54] [I] Precision: FP32+FP16
+[10/24/2026-19:14:54] [I] Calibration: 
+[10/24/2026-19:14:54] [I] Refit: Disabled
+[10/24/2026-19:14:54] [I] Sparsity: Disabled
+[10/24/2026-19:14:54] [I] Safe mode: Disabled
+[10/24/2026-19:14:54] [I] DirectIO mode: Disabled
+[10/24/2026-19:14:54] [I] Restricted mode: Disabled
+[10/24/2026-19:14:54] [I] Save engine: logs/trt/bj7_parseq_legado_nar_fp16.engine
+[10/24/2026-19:14:54] [I] Load engine: 
+[10/24/2026-19:14:54] [I] Profiling verbosity: 0
+[10/24/2026-19:14:54] [I] Tactic sources: Using default tactic sources
+[10/24/2026-19:14:54] [I] timingCacheMode: local
+[10/24/2026-19:14:54] [I] timingCacheFile: 
+[10/24/2026-19:14:54] [I] Input(s)s format: fp32:CHW
+[10/24/2026-19:14:54] [I] Output(s)s format: fp32:CHW
+[10/24/2026-19:14:54] [I] Input build shapes: model
+[10/24/2026-19:14:54] [I] Input calibration shapes: model
+[10/24/2026-19:14:54] [I] === System Options ===
+[10/24/2026-19:14:54] [I] Device: 0
+[10/24/2026-19:14:54] [I] DLACore: 
+[10/24/2026-19:14:54] [I] Plugins:
+[10/24/2026-19:14:54] [I] === Inference Options ===
+[10/24/2026-19:14:54] [I] Batch: Explicit
+[10/24/2026-19:14:54] [I] Input inference shapes: model
+[10/24/2026-19:14:54] [I] Iterations: 10
+[10/24/2026-19:14:54] [I] Duration: 3s (+ 200ms warm up)
+[10/24/2026-19:14:54] [I] Sleep time: 0ms
+[10/24/2026-19:14:54] [I] Idle time: 0ms
+[10/24/2026-19:14:54] [I] Streams: 1
+[10/24/2026-19:14:54] [I] ExposeDMA: Disabled
+[10/24/2026-19:14:54] [I] Data transfers: Enabled
+[10/24/2026-19:14:54] [I] Spin-wait: Disabled
+[10/24/2026-19:14:54] [I] Multithreading: Disabled
+[10/24/2026-19:14:54] [I] CUDA Graph: Disabled
+[10/24/2026-19:14:54] [I] Separate profiling: Disabled
+[10/24/2026-19:14:54] [I] Time Deserialize: Disabled
+[10/24/2026-19:14:54] [I] Time Refit: Disabled
+[10/24/2026-19:14:54] [I] Skip inference: Disabled
+[10/24/2026-19:14:54] [I] Inputs:
+[10/24/2026-19:14:54] [I] === Reporting Options ===
+[10/24/2026-19:14:54] [I] Verbose: Disabled
+[10/24/2026-19:14:54] [I] Averages: 10 inferences
+[10/24/2026-19:14:54] [I] Percentile: 99
+[10/24/2026-19:14:54] [I] Dump refittable layers:Disabled
+[10/24/2026-19:14:54] [I] Dump output: Disabled
+[10/24/2026-19:14:54] [I] Profile: Disabled
+[10/24/2026-19:14:54] [I] Export timing to JSON file: 
+[10/24/2026-19:14:54] [I] Export output to JSON file: 
+[10/24/2026-19:14:54] [I] Export profile to JSON file: 
+[10/24/2026-19:14:54] [I] 
+[10/24/2026-19:14:54] [I] === Device Information ===
+[10/24/2026-19:14:54] [I] Selected Device: NVIDIA Tegra X1
+[10/24/2026-19:14:54] [I] Compute Capability: 5.3
+[10/24/2026-19:14:54] [I] SMs: 1
+[10/24/2026-19:14:54] [I] Compute Clock Rate: 0.9216 GHz
+[10/24/2026-19:14:54] [I] Device Global Memory: 3963 MiB
+[10/24/2026-19:14:54] [I] Shared Memory per SM: 64 KiB
+[10/24/2026-19:14:54] [I] Memory Bus Width: 64 bits (ECC disabled)
+[10/24/2026-19:14:54] [I] Memory Clock Rate: 0.01275 GHz
+[10/24/2026-19:14:54] [I] 
+[10/24/2026-19:14:54] [I] TensorRT version: 8.2.1
+[10/24/2026-19:14:56] [I] [TRT] [MemUsageChange] Init CUDA: CPU +229, GPU +0, now: CPU 248, GPU 2416 (MiB)
+[10/24/2026-19:14:56] [I] [TRT] [MemUsageSnapshot] Begin constructing builder kernel library: CPU 248 MiB, GPU 2445 MiB
+[10/24/2026-19:14:56] [I] [TRT] [MemUsageSnapshot] End constructing builder kernel library: CPU 278 MiB, GPU 2475 MiB
+[10/24/2026-19:14:56] [I] Start parsing network model
+[10/24/2026-19:14:57] [I] [TRT] ----------------------------------------------------------------
+[10/24/2026-19:14:57] [I] [TRT] Input filename:   logs/onnx/bj7_parseq_legado_nar.onnx
+[10/24/2026-19:14:57] [I] [TRT] ONNX IR version:  0.0.7
+[10/24/2026-19:14:57] [I] [TRT] Opset version:    13
+[10/24/2026-19:14:57] [I] [TRT] Producer name:    pytorch
+[10/24/2026-19:14:57] [I] [TRT] Producer version: 2.11.0
+[10/24/2026-19:14:57] [I] [TRT] Domain:           
+[10/24/2026-19:14:57] [I] [TRT] Model version:    0
+[10/24/2026-19:14:57] [I] [TRT] Doc string:       
+[10/24/2026-19:14:57] [I] [TRT] ----------------------------------------------------------------
+[10/24/2026-19:14:57] [W] [TRT] onnx2trt_utils.cpp:366: Your ONNX model has been generated with INT64 weights, while TensorRT does not natively support INT64. Attempting to cast down to INT32.
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [W] [TRT] onnx2trt_utils.cpp:392: One or more weights outside the range of INT32 was clamped
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul_1: broadcasting input1 to make tensors conform, dims(input0)=[128,1,192][NONE] dims(input1)=[1,192,384][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul_1: broadcasting input1 to make tensors conform, dims(input0)=[128,1,192][NONE] dims(input1)=[1,192,384][NONE].
+[10/24/2026-19:14:58] [W] [TRT] onnx2trt_utils.cpp:392: One or more weights outside the range of INT32 was clamped
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul_1: broadcasting input1 to make tensors conform, dims(input0)=[128,1,192][NONE] dims(input1)=[1,192,384][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:58] [I] [TRT] /decoder/layers.0/cross_attn/MatMul_1: broadcasting input1 to make tensors conform, dims(input0)=[128,1,192][NONE] dims(input1)=[1,192,384][NONE].
+[10/24/2026-19:14:59] [W] [TRT] Output type must be INT32 for shape outputs
+[10/24/2026-19:14:59] [I] Finish parsing network model
+[10/24/2026-19:14:59] [I] [TRT] /decoder/layers.0/self_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:59] [I] [TRT] /decoder/layers.0/cross_attn/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[26,1,192][NONE] dims(input1)=[1,192,192][NONE].
+[10/24/2026-19:14:59] [I] [TRT] /decoder/layers.0/cross_attn/MatMul_1: broadcasting input1 to make tensors conform, dims(input0)=[128,1,192][NONE] dims(input1)=[1,192,384][NONE].
+[10/24/2026-19:15:01] [I] [TRT] ---------- Layers Running on DLA ----------
+[10/24/2026-19:15:01] [I] [TRT] ---------- Layers Running on GPU ----------
+[10/24/2026-19:15:01] [I] [TRT] [GpuLayer] /encoder/patch_embed/proj/Conv
+[10/24/2026-19:15:01] [I] [TRT] [GpuLayer] {ForeignNode[onnx::Expand_1747.../head/Add]}
+[10/24/2026-19:15:02] [I] [TRT] [MemUsageChange] Init cuBLAS/cuBLASLt: CPU +158, GPU +139, now: CPU 464, GPU 2666 (MiB)
+[10/24/2026-19:15:03] [I] [TRT] [MemUsageChange] Init cuDNN: CPU +240, GPU +287, now: CPU 704, GPU 2953 (MiB)
+[10/24/2026-19:15:03] [I] [TRT] Local timing cache in use. Profiling results in this builder pass will not be stored.

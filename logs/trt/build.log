@@ -1,0 +1,109 @@
+nohup: ignoring input
+Início: sáb out 24 15:05:11 -03 2026 | ONNX_DIR=logs/onnx | PRECISIONS=fp16 fp32 | ONLY=todos
+=== 15:05:11 bj7_crnn_bin (fp16) ===
+OK  logs/trt/bj7_crnn_bin_fp16.engine (42M) | throughput trtexec: 13.0796 qps
+=== 15:06:33 bj7_crnn_bin (fp32) ===
+OK  logs/trt/bj7_crnn_bin_fp32.engine (66M) | throughput trtexec: 11.8246 qps
+=== 15:07:28 bj7_crnn (fp16) ===
+OK  logs/trt/bj7_crnn_fp16.engine (42M) | throughput trtexec: 13.0167 qps
+=== 15:08:44 bj7_crnn (fp32) ===
+OK  logs/trt/bj7_crnn_fp32.engine (66M) | throughput trtexec: 11.8126 qps
+=== 15:09:39 bj7_parseq_ar (fp16) ===
+[FALHOU] bj7_parseq_ar (fp16) — últimas linhas de logs/trt/bj7_parseq_ar_fp16.log:
+[10/24/2026-15:09:43] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:43] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:43] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:43] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:43] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:09:43 bj7_parseq_ar (fp32) ===
+[FALHOU] bj7_parseq_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_ar_fp32.log:
+[10/24/2026-15:09:47] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:47] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:47] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:47] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:47] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:09:48 bj7_parseq_bin_ar (fp16) ===
+[FALHOU] bj7_parseq_bin_ar (fp16) — últimas linhas de logs/trt/bj7_parseq_bin_ar_fp16.log:
+[10/24/2026-15:09:52] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:52] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:52] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:52] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:52] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:09:52 bj7_parseq_bin_ar (fp32) ===
+[FALHOU] bj7_parseq_bin_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_ar_fp32.log:
+[10/24/2026-15:09:56] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:56] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:56] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:56] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:56] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:09:56 bj7_parseq_bin_nar1 (fp16) ===
+[FALHOU] bj7_parseq_bin_nar1 (fp16) — últimas linhas de logs/trt/bj7_parseq_bin_nar1_fp16.log:
+[10/24/2026-15:09:59] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:09:59] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:00 bj7_parseq_bin_nar1 (fp32) ===
+[FALHOU] bj7_parseq_bin_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_nar1_fp32.log:
+[10/24/2026-15:10:03] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:03] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:03 bj7_parseq_bin_nar (fp16) ===
+[FALHOU] bj7_parseq_bin_nar (fp16) — últimas linhas de logs/trt/bj7_parseq_bin_nar_fp16.log:
+[10/24/2026-15:10:07] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:07] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:07 bj7_parseq_bin_nar (fp32) ===
+[FALHOU] bj7_parseq_bin_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_nar_fp32.log:
+[10/24/2026-15:10:11] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:11] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:11 bj7_parseq_legado_ar (fp16) ===
+[FALHOU] bj7_parseq_legado_ar (fp16) — últimas linhas de logs/trt/bj7_parseq_legado_ar_fp16.log:
+[10/24/2026-15:10:15] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:15] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:15] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:15] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:15] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:10:15 bj7_parseq_legado_ar (fp32) ===
+[FALHOU] bj7_parseq_legado_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_ar_fp32.log:
+[10/24/2026-15:10:19] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:19] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:19] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:19] [E] Error[3]: (Unnamed Layer* 1355) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:19] [E] [TRT] ModelImporter.cpp:779: ERROR: onnx2trt_utils.cpp:885 In function elementwiseHelper:
+=== 15:10:19 bj7_parseq_legado_nar1 (fp16) ===
+[FALHOU] bj7_parseq_legado_nar1 (fp16) — últimas linhas de logs/trt/bj7_parseq_legado_nar1_fp16.log:
+[10/24/2026-15:10:23] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:23] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:23 bj7_parseq_legado_nar1 (fp32) ===
+[FALHOU] bj7_parseq_legado_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_nar1_fp32.log:
+[10/24/2026-15:10:26] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:26] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:27 bj7_parseq_legado_nar (fp16) ===
+[FALHOU] bj7_parseq_legado_nar (fp16) — últimas linhas de logs/trt/bj7_parseq_legado_nar_fp16.log:
+[10/24/2026-15:10:30] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:30] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:30 bj7_parseq_legado_nar (fp32) ===
+[FALHOU] bj7_parseq_legado_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_nar_fp32.log:
+[10/24/2026-15:10:34] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:34] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:34 bj7_parseq_nar1 (fp16) ===
+[FALHOU] bj7_parseq_nar1 (fp16) — últimas linhas de logs/trt/bj7_parseq_nar1_fp16.log:
+[10/24/2026-15:10:38] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:38] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:38 bj7_parseq_nar1 (fp32) ===
+[FALHOU] bj7_parseq_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_nar1_fp32.log:
+[10/24/2026-15:10:41] [E] Error[3]: (Unnamed Layer* 1143) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:41] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:42 bj7_parseq_nar (fp16) ===
+[FALHOU] bj7_parseq_nar (fp16) — últimas linhas de logs/trt/bj7_parseq_nar_fp16.log:
+[10/24/2026-15:10:45] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:45] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:45 bj7_parseq_nar (fp32) ===
+[FALHOU] bj7_parseq_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_nar_fp32.log:
+[10/24/2026-15:10:49] [E] Error[3]: (Unnamed Layer* 1121) [Constant]:constant weights has count 0 but 1 was expected
+[10/24/2026-15:10:49] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:179 In function parseGraph:
+=== 15:10:49 bj7_svtr_bin (fp16) ===
+OK  logs/trt/bj7_svtr_bin_fp16.engine (29M) | throughput trtexec: 25.6575 qps
+=== 15:15:47 bj7_svtr_bin (fp32) ===
+OK  logs/trt/bj7_svtr_bin_fp32.engine (30M) | throughput trtexec: 25.3482 qps
+=== 15:17:57 bj7_svtr (fp16) ===
+OK  logs/trt/bj7_svtr_fp16.engine (29M) | throughput trtexec: 25.4851 qps
+=== 15:22:51 bj7_svtr (fp32) ===
+OK  logs/trt/bj7_svtr_fp32.engine (30M) | throughput trtexec: 25.2682 qps
+Fim: sáb out 24 15:25:01 -03 2026 | ok=8 falhas=18 pulados=0 | motores em logs/trt

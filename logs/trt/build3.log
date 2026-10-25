@@ -1,0 +1,36 @@
+Início: sáb out 24 19:27:30 -03 2026 | ONNX_DIR=logs/onnx | PRECISIONS=fp32 | ONLY=todos
+[skip] logs/trt/bj7_crnn_bin_fp32.engine (já existe)
+[skip] logs/trt/bj7_crnn_fp32.engine (já existe)
+=== 19:27:30 bj7_parseq_ar (fp32) ===
+[FALHOU] bj7_parseq_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_ar_fp32.log:
+[10/24/2026-19:27:35] [E] Error[3]: /ArgMax: at least 2 dimensions are required for input.
+[10/24/2026-19:27:35] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:162 In function parseGraph:
+=== 19:27:35 bj7_parseq_bin_ar (fp32) ===
+[FALHOU] bj7_parseq_bin_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_ar_fp32.log:
+[10/24/2026-19:27:40] [E] Error[3]: /ArgMax: at least 2 dimensions are required for input.
+[10/24/2026-19:27:40] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:162 In function parseGraph:
+=== 19:27:40 bj7_parseq_bin_nar1 (fp32) ===
+build_trt_engines.sh: line 38: 10206 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_bin_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_nar1_fp32.log:
+=== 19:27:57 bj7_parseq_bin_nar (fp32) ===
+build_trt_engines.sh: line 38: 10217 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_bin_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_bin_nar_fp32.log:
+=== 19:28:11 bj7_parseq_legado_ar (fp32) ===
+[FALHOU] bj7_parseq_legado_ar (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_ar_fp32.log:
+[10/24/2026-19:28:15] [E] Error[3]: /ArgMax: at least 2 dimensions are required for input.
+[10/24/2026-19:28:15] [E] [TRT] ModelImporter.cpp:779: ERROR: ModelImporter.cpp:162 In function parseGraph:
+=== 19:28:16 bj7_parseq_legado_nar1 (fp32) ===
+build_trt_engines.sh: line 38: 10234 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_legado_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_nar1_fp32.log:
+=== 19:28:32 bj7_parseq_legado_nar (fp32) ===
+build_trt_engines.sh: line 38: 10246 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_legado_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_legado_nar_fp32.log:
+=== 19:28:46 bj7_parseq_nar1 (fp32) ===
+build_trt_engines.sh: line 38: 10257 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_nar1 (fp32) — últimas linhas de logs/trt/bj7_parseq_nar1_fp32.log:
+=== 19:29:03 bj7_parseq_nar (fp32) ===
+build_trt_engines.sh: line 38: 10268 Segmentation fault      (core dumped) "$TRTEXEC" --onnx="$onnx" --saveEngine="$engine" --workspace=1024 "${flags[@]}" > "$log" 2>&1
+[FALHOU] bj7_parseq_nar (fp32) — últimas linhas de logs/trt/bj7_parseq_nar_fp32.log:
+[skip] logs/trt/bj7_svtr_bin_fp32.engine (já existe)
+[skip] logs/trt/bj7_svtr_fp32.engine (já existe)
+Fim: sáb out 24 19:29:17 -03 2026 | ok=0 falhas=9 pulados=4 | motores em logs/trt

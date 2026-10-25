@@ -1,0 +1,155 @@
+&&&& RUNNING TensorRT.trtexec [TensorRT v8201] # /usr/src/tensorrt/bin/trtexec --onnx=logs/onnx/bj7_crnn.onnx --saveEngine=logs/trt/bj7_crnn_fp16.engine --workspace=1024 --fp16
+[10/24/2026-15:28:45] [I] === Model Options ===
+[10/24/2026-15:28:45] [I] Format: ONNX
+[10/24/2026-15:28:45] [I] Model: logs/onnx/bj7_crnn.onnx
+[10/24/2026-15:28:45] [I] Output:
+[10/24/2026-15:28:45] [I] === Build Options ===
+[10/24/2026-15:28:45] [I] Max batch: explicit batch
+[10/24/2026-15:28:45] [I] Workspace: 1024 MiB
+[10/24/2026-15:28:45] [I] minTiming: 1
+[10/24/2026-15:28:45] [I] avgTiming: 8
+[10/24/2026-15:28:45] [I] Precision: FP32+FP16
+[10/24/2026-15:28:45] [I] Calibration: 
+[10/24/2026-15:28:45] [I] Refit: Disabled
+[10/24/2026-15:28:45] [I] Sparsity: Disabled
+[10/24/2026-15:28:45] [I] Safe mode: Disabled
+[10/24/2026-15:28:45] [I] DirectIO mode: Disabled
+[10/24/2026-15:28:45] [I] Restricted mode: Disabled
+[10/24/2026-15:28:45] [I] Save engine: logs/trt/bj7_crnn_fp16.engine
+[10/24/2026-15:28:45] [I] Load engine: 
+[10/24/2026-15:28:45] [I] Profiling verbosity: 0
+[10/24/2026-15:28:45] [I] Tactic sources: Using default tactic sources
+[10/24/2026-15:28:45] [I] timingCacheMode: local
+[10/24/2026-15:28:45] [I] timingCacheFile: 
+[10/24/2026-15:28:45] [I] Input(s)s format: fp32:CHW
+[10/24/2026-15:28:45] [I] Output(s)s format: fp32:CHW
+[10/24/2026-15:28:45] [I] Input build shapes: model
+[10/24/2026-15:28:45] [I] Input calibration shapes: model
+[10/24/2026-15:28:45] [I] === System Options ===
+[10/24/2026-15:28:45] [I] Device: 0
+[10/24/2026-15:28:45] [I] DLACore: 
+[10/24/2026-15:28:45] [I] Plugins:
+[10/24/2026-15:28:45] [I] === Inference Options ===
+[10/24/2026-15:28:45] [I] Batch: Explicit
+[10/24/2026-15:28:45] [I] Input inference shapes: model
+[10/24/2026-15:28:45] [I] Iterations: 10
+[10/24/2026-15:28:45] [I] Duration: 3s (+ 200ms warm up)
+[10/24/2026-15:28:45] [I] Sleep time: 0ms
+[10/24/2026-15:28:45] [I] Idle time: 0ms
+[10/24/2026-15:28:45] [I] Streams: 1
+[10/24/2026-15:28:45] [I] ExposeDMA: Disabled
+[10/24/2026-15:28:45] [I] Data transfers: Enabled
+[10/24/2026-15:28:45] [I] Spin-wait: Disabled
+[10/24/2026-15:28:45] [I] Multithreading: Disabled
+[10/24/2026-15:28:45] [I] CUDA Graph: Disabled
+[10/24/2026-15:28:45] [I] Separate profiling: Disabled
+[10/24/2026-15:28:45] [I] Time Deserialize: Disabled
+[10/24/2026-15:28:45] [I] Time Refit: Disabled
+[10/24/2026-15:28:45] [I] Skip inference: Disabled
+[10/24/2026-15:28:45] [I] Inputs:
+[10/24/2026-15:28:45] [I] === Reporting Options ===
+[10/24/2026-15:28:45] [I] Verbose: Disabled
+[10/24/2026-15:28:45] [I] Averages: 10 inferences
+[10/24/2026-15:28:45] [I] Percentile: 99
+[10/24/2026-15:28:45] [I] Dump refittable layers:Disabled
+[10/24/2026-15:28:45] [I] Dump output: Disabled
+[10/24/2026-15:28:45] [I] Profile: Disabled
+[10/24/2026-15:28:45] [I] Export timing to JSON file: 
+[10/24/2026-15:28:45] [I] Export output to JSON file: 
+[10/24/2026-15:28:45] [I] Export profile to JSON file: 
+[10/24/2026-15:28:45] [I] 
+[10/24/2026-15:28:45] [I] === Device Information ===
+[10/24/2026-15:28:45] [I] Selected Device: NVIDIA Tegra X1
+[10/24/2026-15:28:45] [I] Compute Capability: 5.3
+[10/24/2026-15:28:45] [I] SMs: 1
+[10/24/2026-15:28:45] [I] Compute Clock Rate: 0.9216 GHz
+[10/24/2026-15:28:45] [I] Device Global Memory: 3963 MiB
+[10/24/2026-15:28:45] [I] Shared Memory per SM: 64 KiB
+[10/24/2026-15:28:45] [I] Memory Bus Width: 64 bits (ECC disabled)
+[10/24/2026-15:28:45] [I] Memory Clock Rate: 0.01275 GHz
+[10/24/2026-15:28:45] [I] 
+[10/24/2026-15:28:45] [I] TensorRT version: 8.2.1
+[10/24/2026-15:28:46] [I] [TRT] [MemUsageChange] Init CUDA: CPU +229, GPU +0, now: CPU 248, GPU 2774 (MiB)
+[10/24/2026-15:28:47] [I] [TRT] [MemUsageSnapshot] Begin constructing builder kernel library: CPU 248 MiB, GPU 2774 MiB
+[10/24/2026-15:28:47] [I] [TRT] [MemUsageSnapshot] End constructing builder kernel library: CPU 277 MiB, GPU 2804 MiB
+[10/24/2026-15:28:47] [I] Start parsing network model
+[10/24/2026-15:28:47] [I] [TRT] ----------------------------------------------------------------
+[10/24/2026-15:28:47] [I] [TRT] Input filename:   logs/onnx/bj7_crnn.onnx
+[10/24/2026-15:28:47] [I] [TRT] ONNX IR version:  0.0.7
+[10/24/2026-15:28:47] [I] [TRT] Opset version:    13
+[10/24/2026-15:28:47] [I] [TRT] Producer name:    pytorch
+[10/24/2026-15:28:47] [I] [TRT] Producer version: 2.11.0
+[10/24/2026-15:28:47] [I] [TRT] Domain:           
+[10/24/2026-15:28:47] [I] [TRT] Model version:    0
+[10/24/2026-15:28:47] [I] [TRT] Doc string:       
+[10/24/2026-15:28:47] [I] [TRT] ----------------------------------------------------------------
+[10/24/2026-15:28:47] [W] [TRT] onnx2trt_utils.cpp:366: Your ONNX model has been generated with INT64 weights, while TensorRT does not natively support INT64. Attempting to cast down to INT32.
+[10/24/2026-15:28:47] [I] [TRT] /head/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[64,1,512][NONE] dims(input1)=[1,512,37][NONE].
+[10/24/2026-15:28:47] [I] Finish parsing network model
+[10/24/2026-15:28:47] [I] [TRT] /head/MatMul: broadcasting input1 to make tensors conform, dims(input0)=[64,1,512][NONE] dims(input1)=[1,512,37][NONE].
+[10/24/2026-15:28:47] [I] [TRT] ---------- Layers Running on DLA ----------
+[10/24/2026-15:28:47] [I] [TRT] ---------- Layers Running on GPU ----------
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.0/Conv + /cnn/cnn.2/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.3/MaxPool
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.4/Conv + /cnn/cnn.6/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.7/MaxPool
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.8/Conv + /cnn/cnn.10/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.11/Conv + /cnn/cnn.13/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.14/MaxPool
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.15/Conv + /cnn/cnn.17/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.18/Conv + /cnn/cnn.20/Relu
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] /cnn/cnn.21/MaxPool
+[10/24/2026-15:28:47] [I] [TRT] [GpuLayer] {ForeignNode[(Unnamed Layer* 178) [LoopOutput][length][Constant].../Transpose_1]}
+[10/24/2026-15:28:48] [I] [TRT] [MemUsageChange] Init cuBLAS/cuBLASLt: CPU +158, GPU +142, now: CPU 465, GPU 2997 (MiB)
+[10/24/2026-15:28:49] [I] [TRT] [MemUsageChange] Init cuDNN: CPU +241, GPU +236, now: CPU 706, GPU 3233 (MiB)
+[10/24/2026-15:28:49] [I] [TRT] Local timing cache in use. Profiling results in this builder pass will not be stored.
+[10/24/2026-15:29:35] [I] [TRT] Some tactics do not have sufficient workspace memory to run. Increasing workspace size may increase performance, please check verbose output.
+[10/24/2026-15:29:55] [I] [TRT] Detected 1 inputs and 1 output network tensors.
+[10/24/2026-15:29:56] [I] [TRT] Total Host Persistent Memory: 4256
+[10/24/2026-15:29:56] [I] [TRT] Total Device Persistent Memory: 25092608
+[10/24/2026-15:29:56] [I] [TRT] Total Scratch Memory: 671744
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageStats] Peak memory usage of TRT CPU/GPU memory allocators: CPU 13 MiB, GPU 560 MiB
+[10/24/2026-15:29:56] [I] [TRT] [BlockAssignment] Algorithm ShiftNTopDown took 0.196414ms to assign 2 blocks to 13 nodes requiring 2768896 bytes.
+[10/24/2026-15:29:56] [I] [TRT] Total Activation Memory: 2768896
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuBLAS/cuBLASLt: CPU +0, GPU +0, now: CPU 969, GPU 3773 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuDNN: CPU +1, GPU +0, now: CPU 970, GPU 3773 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] TensorRT-managed allocation in building engine: CPU +8, GPU +64, now: CPU 8, GPU 64 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init CUDA: CPU +0, GPU +0, now: CPU 997, GPU 3813 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] Loaded engine size: 41 MiB
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuBLAS/cuBLASLt: CPU +0, GPU +0, now: CPU 1003, GPU 3813 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuDNN: CPU +0, GPU +0, now: CPU 1003, GPU 3813 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] TensorRT-managed allocation in engine deserialization: CPU +0, GPU +36, now: CPU 0, GPU 36 (MiB)
+[10/24/2026-15:29:56] [I] Engine built in 71.0462 sec.
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuBLAS/cuBLASLt: CPU +1, GPU +0, now: CPU 903, GPU 3804 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] Init cuDNN: CPU +0, GPU +0, now: CPU 903, GPU 3804 (MiB)
+[10/24/2026-15:29:56] [I] [TRT] [MemUsageChange] TensorRT-managed allocation in IExecutionContext creation: CPU +0, GPU +26, now: CPU 0, GPU 62 (MiB)
+[10/24/2026-15:29:56] [I] Using random values for input image
+[10/24/2026-15:29:56] [I] Created input binding for image with dimensions 1x3x64x256
+[10/24/2026-15:29:56] [I] Using random values for output logits
+[10/24/2026-15:29:56] [I] Created output binding for logits with dimensions 1x64x37
+[10/24/2026-15:29:56] [I] Starting inference
+[10/24/2026-15:30:00] [I] Warmup completed 3 queries over 200 ms
+[10/24/2026-15:30:00] [I] Timing trace has 41 queries over 3.14816 s
+[10/24/2026-15:30:00] [I] 
+[10/24/2026-15:30:00] [I] === Trace details ===
+[10/24/2026-15:30:00] [I] Trace averages of 10 runs:
+[10/24/2026-15:30:00] [I] Average on 10 runs - GPU latency: 76.4317 ms - Host latency: 76.6077 ms (end to end 76.698 ms, enqueue 76.3924 ms)
+[10/24/2026-15:30:00] [I] Average on 10 runs - GPU latency: 76.6027 ms - Host latency: 76.7455 ms (end to end 76.8125 ms, enqueue 76.5448 ms)
+[10/24/2026-15:30:00] [I] Average on 10 runs - GPU latency: 76.4414 ms - Host latency: 76.632 ms (end to end 76.7288 ms, enqueue 76.399 ms)
+[10/24/2026-15:30:00] [I] Average on 10 runs - GPU latency: 76.4003 ms - Host latency: 76.597 ms (end to end 76.6958 ms, enqueue 76.356 ms)
+[10/24/2026-15:30:00] [I] 
+[10/24/2026-15:30:00] [I] === Performance summary ===
+[10/24/2026-15:30:00] [I] Throughput: 13.0235 qps
+[10/24/2026-15:30:00] [I] Latency: min = 76.2892 ms, max = 77.8702 ms, mean = 76.6424 ms, median = 76.6315 ms, percentile(99%) = 77.8702 ms
+[10/24/2026-15:30:00] [I] End-to-End Host Latency: min = 76.3876 ms, max = 77.8914 ms, mean = 76.7308 ms, median = 76.705 ms, percentile(99%) = 77.8914 ms
+[10/24/2026-15:30:00] [I] Enqueue Time: min = 76.0695 ms, max = 77.5775 ms, mean = 76.42 ms, median = 76.3945 ms, percentile(99%) = 77.5775 ms
+[10/24/2026-15:30:00] [I] H2D Latency: min = 0.0189209 ms, max = 0.157959 ms, mean = 0.0862453 ms, median = 0.0901489 ms, percentile(99%) = 0.157959 ms
+[10/24/2026-15:30:00] [I] GPU Compute Time: min = 76.1044 ms, max = 77.8171 ms, mean = 76.4655 ms, median = 76.4563 ms, percentile(99%) = 77.8171 ms
+[10/24/2026-15:30:00] [I] D2H Latency: min = 0.00183105 ms, max = 0.11499 ms, mean = 0.0906342 ms, median = 0.0966797 ms, percentile(99%) = 0.11499 ms
+[10/24/2026-15:30:00] [I] Total Host Walltime: 3.14816 s
+[10/24/2026-15:30:00] [I] Total GPU Compute Time: 3.13509 s
+[10/24/2026-15:30:00] [W] * Throughput may be bound by Enqueue Time rather than GPU Compute and the GPU may be under-utilized.
+[10/24/2026-15:30:00] [W]   If not already in use, --useCudaGraph (utilize CUDA graphs where possible) may increase the throughput.
+[10/24/2026-15:30:00] [I] Explanations of the performance metrics are printed in the verbose logs.
+[10/24/2026-15:30:00] [I] 
+&&&& PASSED TensorRT.trtexec [TensorRT v8201] # /usr/src/tensorrt/bin/trtexec --onnx=logs/onnx/bj7_crnn.onnx --saveEngine=logs/trt/bj7_crnn_fp16.engine --workspace=1024 --fp16
