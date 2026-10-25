@@ -11,6 +11,10 @@ Cada ONNX é validado contra o PyTorch (onnxruntime) antes de ser salvo como OK.
       scaled_dot_product_attention não existe no opset 13;
     * torch.triu (máscaras do decoder) trocado por uma versão equivalente com
       operações básicas — Trilu também não existe no opset 13.
+  E depois de exportar, os tensores vazios do primeiro passo da decodificação
+  (Concat com [1, 0, 192]) saem do grafo — o TensorRT 8.2 não aceita peso vazio —
+  e os Mod entre constantes (checagem interna da atenção) viram o valor pronto —
+  o TensorRT 8.2 não tem Mod.
   Os dois mudam só a forma de exportar, não o resultado (validado: previsões
   idênticas ao PyTorch em 200/200 imagens reais).
 
@@ -64,6 +68,104 @@ def _load(model: str, ckpt: Path, binarize: bool, h: int, w: int, decode_ar=True
     return load_model(ckpt, cpu, decode_ar=decode_ar, refine_iters=refine_iters, img_size=(h, w), binarize=binarize)
 
 
+def _drop_empty_tensors(path: Path) -> int:
+    """Remove do grafo os tensores de tamanho zero (ex: shape [1, 0, 192]).
+
+    No primeiro passo da decodificação do PARSeq, a parte "caracteres já previstos"
+    é vazia e entra num Concat (no-op). O onnxruntime aceita, mas o parser do
+    TensorRT 8.2 falha ("constant weights has count 0"). Tirar a entrada vazia dos
+    Concat e apagar os nós que ficam sem uso não muda o resultado.
+    Retorna quantos nós foram removidos (0 nos modelos sem tensores vazios).
+    """
+    import onnx
+    from onnx import shape_inference
+
+    model = onnx.load(str(path))
+    g = model.graph
+    inferred = shape_inference.infer_shapes(model).graph
+    shapes = {}
+    for vi in list(inferred.value_info) + list(inferred.input) + list(inferred.output):
+        dims = vi.type.tensor_type.shape.dim
+        shapes[vi.name] = [d.dim_value if d.HasField("dim_value") else -1 for d in dims]
+    for init in g.initializer:
+        shapes[init.name] = list(init.dims)
+    for n in g.node:
+        if n.op_type == "Constant":
+            for a in n.attribute:
+                if a.name == "value":
+                    shapes[n.output[0]] = list(a.t.dims)
+    empty = {name for name, s in shapes.items() if 0 in s}
+    if not empty:
+        return 0
+
+    for n in g.node:
+        if n.op_type != "Concat" or not any(i in empty for i in n.input):
+            continue
+        keep = [i for i in n.input if i not in empty]
+        del n.input[:]
+        n.input.extend(keep)
+        if len(keep) == 1:  # Concat de um tensor só = cópia
+            n.op_type = "Identity"
+            del n.attribute[:]
+
+    # Remove os nós (e pesos) que não chegam mais na saída
+    needed = {o.name for o in g.output}
+    kept = []
+    for n in reversed(list(g.node)):
+        if any(o in needed for o in n.output):
+            kept.append(n)
+            needed.update(n.input)
+    n_removed = len(g.node) - len(kept)
+    del g.node[:]
+    g.node.extend(reversed(kept))
+    unused = [init for init in g.initializer if init.name not in needed]
+    for init in unused:
+        g.initializer.remove(init)
+
+    left = [n.name for n in g.node if any(t in empty for t in list(n.input) + list(n.output))]
+    if left:
+        raise RuntimeError("tensores vazios ainda em uso em {}".format(left[:5]))
+    onnx.checker.check_model(model)
+    onnx.save(model, str(path))
+    return n_removed
+
+
+def _fold_const_mod(path: Path) -> int:
+    """Troca cada Mod com as duas entradas constantes pelo resultado pronto.
+
+    O nn.MultiheadAttention do decoder do PARSeq exporta uma checagem do tipo
+    `embed_dim % num_heads` como nó Mod entre duas constantes. O TensorRT 8.2 não
+    tem Mod; como o valor é fixo, vira uma constante. Retorna quantos foram trocados.
+    """
+    import onnx
+    from onnx import helper, numpy_helper
+
+    model = onnx.load(str(path))
+    g = model.graph
+    consts = {init.name: numpy_helper.to_array(init) for init in g.initializer}
+    for n in g.node:
+        if n.op_type == "Constant":
+            for a in n.attribute:
+                if a.name == "value":
+                    consts[n.output[0]] = numpy_helper.to_array(a.t)
+    n_folded = 0
+    for idx, n in enumerate(g.node):
+        if n.op_type != "Mod" or not all(i in consts for i in n.input):
+            continue
+        a, b = consts[n.input[0]], consts[n.input[1]]
+        fmod = any(at.name == "fmod" and at.i == 1 for at in n.attribute)
+        value = np.fmod(a, b) if fmod else np.mod(a, b)
+        g.node[idx].CopyFrom(helper.make_node(
+            "Constant", [], [n.output[0]], name=n.name + "_folded",
+            value=numpy_helper.from_array(np.asarray(value, dtype=a.dtype)),
+        ))
+        n_folded += 1
+    if n_folded:
+        onnx.checker.check_model(model)
+        onnx.save(model, str(path))
+    return n_folded
+
+
 def export_one(model_obj, x: torch.Tensor, out: Path, opset: int) -> float:
     """Exporta e valida com onnxruntime; retorna a maior diferença absoluta vs PyTorch."""
     import onnxruntime as ort
@@ -78,6 +180,8 @@ def export_one(model_obj, x: torch.Tensor, out: Path, opset: int) -> float:
         )
     finally:
         torch.triu = orig_triu
+    _drop_empty_tensors(out)
+    _fold_const_mod(out)
     with torch.no_grad():
         ref = model_obj(x).numpy()
     sess = ort.InferenceSession(str(out), providers=["CPUExecutionProvider"])
