@@ -4,6 +4,8 @@ Repositório do Trabalho de Conclusão de Curso para **reconhecimento óptico de
 
 Este documento cobre o caminho completo: **fundamentação teórica → dados → pré-processamento → treino → avaliação → fusão → artefatos de saída**.
 
+**TCC2:** os mesmos modelos rodam só para inferência numa **Jetson Nano**, com compressão (FP16, INT8, pruning, TensorRT), fusão e ensemble medidos no dispositivo (acurácia, FPS, memória, temperatura e energia). Ver seções [14](#14-inferência-na-jetson-tcc2) a [16](#16-compressão-fusão-na-jetson-e-ensemble-tcc2); resultados finais na seção 16.9.
+
 ---
 
 ## Entrega de artefatos (BJ7 / ICPR)
@@ -52,6 +54,21 @@ flowchart TB
 | [`fusion.py`](fusion.py) | Fusão MV e MVCP (intra-modelo e inter-modelos) a partir dos CSVs de teste | `python fusion.py` ou automático ao final de `main.py` |
 | [`requirements.txt`](requirements.txt) | Dependências do ambiente Python | `pip install -r requirements.txt` |
 
+**Scripts do TCC2 (inferência na Jetson)** — detalhes nas seções 14 a 16:
+
+| Artefato | Função |
+|----------|--------|
+| [`crnn/infer.py`](crnn/infer.py), [`svtr/infer.py`](svtr/infer.py), [`parseq/infer.py`](parseq/infer.py) | Inferência standalone (desktop ou Jetson): acurácia, FPS, memória, temperatura, energia e predições num passe só (`--compress`, `--trt-engine`, PARSeq `--parseq-nar`/`--img-h/--img-w`) |
+| [`bench.py`](bench.py) | Medição compartilhada: timer, memória, `PowerLogger` (jtop/nvidia-smi), CSV |
+| [`compress.py`](compress.py) | FP16, INT8 dinâmico, pruning e carga de motores TensorRT |
+| [`prune_model.py`](prune_model.py) | Gera checkpoints podados (`bj7_<modelo>_pruneNN`) |
+| [`export_onnx.py`](export_onnx.py) | Exporta os checkpoints para ONNX (opset 13) e valida contra o PyTorch |
+| [`build_trt_engines.sh`](build_trt_engines.sh) | Compila os ONNX em motores TensorRT na Jetson (`trtexec`) |
+| [`trt_runner.py`](trt_runner.py) | Executa um motor TensorRT com interface de modelo PyTorch |
+| [`run_bench_matrix.sh`](run_bench_matrix.sh) | Roda a matriz inteira de benchmarks na Jetson (com `nohup`, espera térmica, retomada) |
+| [`report.py`](report.py) | Junta benchmarks + fusão numa tabela acurácia × FPS × energia × tamanho |
+| [`sync_jetson.sh`](sync_jetson.sh) | Envia checkpoints, dataset de teste, cache do PARSeq e ONNX para a Jetson (`scp`) |
+
 ### Dados e pré-processamento
 
 | Artefato | Função | Observação |
@@ -69,6 +86,7 @@ flowchart TB
 | `./logs/bj7_parseq/bj7_parseq_log.txt` | Log de treino, validação e teste | Épocas, loss, acurácias; linha final com `test_acc` |
 | `./logs/bj7_parseq/bj7_parseq_preds.csv` | Predições por imagem no conjunto de teste | 15 000 linhas (3 000 tracks × 5 LR). Colunas: `track_id`, `image_type`, `image_idx`, `gt`, `pred`, `conf_seq`, `conf_chars` |
 | `./logs/bj7_fusion_table.txt` | Tabela consolidada de fusão (MV e MVCP) | Acurácias HR/LR por modelo e fusão inter-modelos |
+| `./logs/jetson/`, `./logs/jetson_v2/`, `./logs/jetson_v3/`, `./logs/trt/` | Resultados do TCC2 na Jetson | Benchmarks, predições e fusões por rodada — o que usar de cada pasta está na seção 16.9 |
 
 > **Checkpoints** (`logs/bj7_*/*_best.pt`): produzidos durante o treino, mas **não fazem parte desta entrega GitHub** (arquivos grandes, excluídos no `.gitignore`). Para reavaliar com pesos locais, usar `eval_only=True` em `obter_parametros()`.
 
@@ -132,7 +150,7 @@ Decisões experimentais adicionais: ver [seção 12](#12-decisões-experimentais
 13. [Documentação complementar](#13-documentação-complementar)
 14. [Inferência na Jetson (TCC2)](#14-inferência-na-jetson-tcc2)
 15. [Referência de comandos (CRNN/SVTR/PARSeq)](#15-referência-de-comandos-crnnsvtrparseq)
-16. [Compressão, fusão na Jetson e ensemble (TCC2)](#16-compressão-fusão-na-jetson-e-ensemble-tcc2)
+16. [Compressão, fusão na Jetson e ensemble (TCC2)](#16-compressão-fusão-na-jetson-e-ensemble-tcc2) — 16.1 esperado × medido · 16.6 resolução do PARSeq · 16.7 TensorRT · 16.8 fluxo de execução · **16.9 resultados finais**
 
 ---
 
@@ -198,8 +216,8 @@ Arquitetura **transformer** com decodificação autoregressiva (via `torch.hub`,
 
 - Não usa CTC; o modelo prediz tokens de forma sequencial.
 - Pode ser instanciado **do zero** (`parseq_pretrained=False`) ou com pesos pré-treinados em scene-text genérico (`parseq_pretrained=True`).
-- Entrada padrão: **128×32** px (diferente de SVTR/CRNN).
-- Treino com **augmentation** leve (ColorJitter, RandomAffine, GaussianBlur).
+- Duas variantes de entrada: **32×128** px (resolução nativa da arquitetura, run `bj7_parseq_legado`) e **64×256** px (mesma do SVTR/CRNN, run `bj7_parseq`) — comparadas na seção 16.6.
+- Treino com o mesmo **augmentation** leve dos outros dois modelos (ColorJitter, RandomAffine, GaussianBlur — `make_transform_train` nos três `dataset.py`).
 - Early stopping monitora **char_acc** (acurácia posicional por caractere), não apenas match exato da placa.
 
 ### 2.5 Fusão por voto ponderado
@@ -255,7 +273,7 @@ Diagramas detalhados com Mermaid: [`docs/pipeline.md`](docs/pipeline.md) (gerado
 
 **BJ7 é o mesmo dataset ICPR** (competição/desafio de reconhecimento de placas). Neste repositório ele fica na pasta `bj7/` por conveniência de caminho e nomenclatura dos runs (`bj7_svtr`, etc.), mas os dados, estrutura e protocolo são os do ICPR.
 
-Dataset sintético/realista com **tracks** (sequências de um mesmo veículo). Cada track contém múltiplas capturas HR e LR da mesma placa.
+Dataset **real** (LRLPR-26, da competição *ICPR 2026 Competition on Low-Resolution License Plate Recognition*) organizado em **tracks** (sequências de um mesmo veículo). Cada track contém múltiplas capturas HR e LR da mesma placa.
 
 #### Estrutura de diretórios
 
@@ -355,6 +373,8 @@ python make_bj7_split.py
 ./test/track_10002;testing
 ```
 
+> **Atenção — divisão por track, não por placa.** No Scenario-A a mesma placa aparece em várias tracks, então 843 das 4 000 tracks de validação (21%) têm uma placa que também está no treino: a validação (usada para escolher o checkpoint) fica otimista. O **teste não tem essa sobreposição** (1 placa em 3 000 aparece no treino/validação), então os resultados de teste valem. Corrigir exigiria refazer o split por placa e retreinar.
+
 ### 5.2 Gerar crops do RodoSol
 
 ```bash
@@ -383,22 +403,24 @@ No treino BJ7, HR e LR são **misturados** como amostras i.i.d. — o modelo nã
 - **Paper:** Du et al., *SVTR: Scene Text Recognition with a Single Visual Model* (2022).
 - **Mecanismo:** Transformer híbrido (mixers locais + globais) + cabeça **CTC**.
 - **Entrada:** 256×64 px.
-- **Parâmetros:** ~2M (Tiny).
+- **Configuração:** 3 estágios (dimensões 64/128/256, profundidades 3/6/3, cabeças 2/4/8).
+- **Parâmetros:** ~3,7M (contados no checkpoint).
 - **Treino:** Adam, CTCLoss, monitoramento por `val_acc` (acurácia de placa).
 
 ### 6.2 CRNN (`crnn/`)
 
 - **Paper:** Shi et al., *An End-to-End Trainable Neural Network for Image-based Sequence Recognition* (2015).
-- **Mecanismo:** CNN + BiLSTM × 2 + **CTC**.
+- **Mecanismo:** CNN + BiLSTM × 2 (256 unidades por direção) + **CTC**.
 - **Entrada:** 256×64 px.
+- **Parâmetros:** ~7,7M.
 - **Baseline clássico** para comparação com arquiteturas mais recentes.
 
 ### 6.3 PARSeq-Tiny (`parseq/`)
 
-- **Paper:** Bautista & Atienza, *Scene Text Recognition with Permuted Autoregression* (2022).
+- **Paper:** Bautista & Atienza, *Scene Text Recognition with Permuted Autoregressive Sequence Models* (ECCV 2022).
 - **Mecanismo:** Transformer autoregressivo via `torch.hub.load("baudm/parseq", ...)`.
-- **Entrada:** 128×32 px.
-- **Variante padrão:** `parseq_tiny` (~6M parâmetros).
+- **Entrada:** 32×128 px (`bj7_parseq_legado`, nativa) ou 64×256 px (`bj7_parseq`, retreinado) — `--img-h/--img-w` no `infer.py`.
+- **Variante padrão:** `parseq_tiny` (~6,0M parâmetros; 6,1M em 64×256, pelo `pos_embed` maior).
 - **Treino:** AdamW, loss nativa do PARSeq, early stopping por `char_acc`.
 
 ### 6.4 Vocabulário compartilhado (CTC)
@@ -709,14 +731,14 @@ Alterar qualquer item abaixo implica **nova bateria de experimentos** documentad
 
 ## 14. Inferência na Jetson (TCC2)
 
-> Início do **TCC2**: portar o pipeline para um dispositivo embarcado (Jetson Nano) e comparar acurácia, FPS, memória, temperatura e energia contra o desktop. **Treino continua só no desktop** (RTX 4060); a Jetson roda **só inferência** (com e sem compressão dos modelos). Seção em construção — os 3 modelos (CRNN, SVTR, PARSeq) já têm `infer.py` portado e validado no desktop; compressão fica para uma etapa futura.
+> Início do **TCC2**: portar o pipeline para um dispositivo embarcado (Jetson Nano) e comparar acurácia, FPS, memória, temperatura e energia contra o desktop. **Treino continua só no desktop** (RTX 4060); a Jetson roda **só inferência** (com e sem compressão dos modelos). Os 3 modelos (CRNN, SVTR, PARSeq) têm `infer.py` portado e validado nas duas plataformas; compressão, TensorRT, fusão na Jetson e resultados finais estão na [seção 16](#16-compressão-fusão-na-jetson-e-ensemble-tcc2).
 
 ### 14.1 Hardware
 
 | | Desktop | Jetson |
 |---|---|---|
 | Papel | Treino dos 3 modelos | Só inferência (com/sem compressão) |
-| Equipamento | NVIDIA RTX 4060 | Seeed reComputer J1020 v2, módulo Jetson Nano 4GB (P3448) |
+| Equipamento | AMD Ryzen 7 5700X, 16GB RAM, NVIDIA RTX 4060 (8GB) | Seeed reComputer J1020 v2, módulo Jetson Nano 4GB (P3448): ARM Cortex-A57 4 núcleos @ 1,43GHz, GPU Maxwell 128 núcleos CUDA, 4GB compartilhados CPU/GPU |
 | Sistema | — | JetPack 4.6.6 (L4T R32.7.6) |
 | Armazenamento do projeto | disco local | SSD NVMe 256GB em `/mnt/ssd` (eMMC de 16GB tem só o SO — não usar pra dados/modelos) |
 
@@ -835,7 +857,7 @@ Cada execução imprime `seq_acc`, `char_acc`, `fps`, `avg_latency_ms` e pico de
 | Acurácia (placa/caractere) | `*/infer.py`, mesma lógica do `evaluate`/decodificação de cada `*/train.py` |
 | FPS / latência | `bench.py::Timer`, com warmup configurável (`--warmup-batches`, padrão 3) |
 | Memória (pico alocado pelo PyTorch) | `bench.py::gpu_memory_mb` (`torch.cuda.max_memory_allocated`) — funciona igual em desktop e Jetson |
-| Temperatura / potência / energia | `bench.py::PowerLogger` — amostra em background (thread, padrão 1 sample/s no treino e 0.5s/s na inferência) e integra energia por trapézio. Desktop: `nvidia-smi` (com fallback pra GPUs que não expõem `power.draw` direto, lendo `nvidia-smi -q -d POWER`). Jetson: `jetson-stats` (jtop) — requer `sudo -H pip3 install -U jetson-stats` + reboot lá. Se o pacote/serviço não estiver disponível, os campos ficam vazios no CSV sem quebrar o run |
+| Temperatura / potência / energia | `bench.py::PowerLogger` — amostra em background (thread, padrão 1 sample/s no treino e 0.5s/s na inferência) e integra energia por trapézio. Desktop: `nvidia-smi` (com fallback pra GPUs que não expõem `power.draw` direto, lendo `nvidia-smi -q -d POWER`). Jetson: `jetson-stats` (jtop) — requer `sudo -H pip3 install -U jetson-stats` + reboot lá. Se o pacote/serviço não estiver disponível, os campos ficam vazios no CSV sem quebrar o run. **A energia é integrada na execução inteira** (inclui leitura e pré-processamento das imagens, que o FPS não cronometra) — por isso `energy_wh`/n_imagens dá um pouco mais que potência ÷ FPS (~12% no CRNN) |
 | Hardware | Coluna `hardware` no CSV (`--hardware jetson\|desktop`; autodetectado via `/etc/nv_tegra_release` se omitido) |
 | Binarização | Coluna `binarize` no CSV (`True`/`False`) — identifica a linha mesmo se os CSVs forem unificados depois |
 
@@ -843,10 +865,13 @@ Comandos completos (smoke test + split inteiro, cor e binarizado, nos 3 modelos)
 
 ### 14.7 Pendências
 
-- Medir na Jetson o PARSeq retreinado em 64×256 contra o legado em 32×128 (seção 16.6).
-- Validar os resultados binarizados (CRNN/SVTR) num split maior — os primeiros smoke tests (20 imagens) mostraram acurácia bem mais baixa que em cor, mas a amostra é pequena demais pra confirmar se é efeito real da binarização ou ruído.
-- Rodar a matriz de compressão/fusão/ensemble na Jetson (seção 16) e consolidar com `report.py`.
-- MobileNet + distillation (exige retreino) — próxima etapa.
+Já concluído: matriz completa na Jetson (compressão, fusão, ensemble, binarização, TensorRT, PARSeq em duas resoluções) — resultados na seção 16.9. Em aberto:
+
+- **Lote de 5 imagens por track**: processar a track inteira de uma vez amortiza a sobrecarga por chamada (provável gargalo com lote 1) e deve subir a vazão da fusão. Serve também como evidência direta do gargalo (FPS por imagem com lote 1 × 5 × 16, junto com a ocupação da GPU via `tegrastats`).
+- **Ensemble medido num pipeline único**: hoje o FPS do ensemble é **estimado** pela soma das latências dos modelos medidos separadamente.
+- **Pruning estruturado com ajuste fino** (o não estruturado sem ajuste não acelera e perde acurácia a partir de 50%).
+- **Split por placa** em vez de por track (ver nota na seção 5.1) e retreino.
+- **MobileNet + distillation** (exige retreino).
 
 ## 15. Referência de comandos (CRNN/SVTR/PARSeq)
 
@@ -925,14 +950,15 @@ Cada execução **adiciona** uma linha ao `--out-csv` (não sobrescreve) — rod
 
 Objetivo: **subir FPS na Jetson sem derrubar muito a acurácia**. Três técnicas de compressão aplicadas a checkpoints já treinados (sem retreino) — **FP16**, **quantização INT8** e **pruning** — mais a fusão MV/MVCP (do TCC1) sobre predições geradas na própria Jetson e o **ensemble** (fusão inter-modelos) medido como uma configuração da curva acurácia × FPS.
 
-### 16.1 O que esperar de cada técnica (limitações da Jetson Nano)
+### 16.1 Cada técnica: esperado × medido na Jetson Nano
 
-| Técnica | Como | Onde roda | Efeito esperado |
-|---|---|---|---|
-| **FP16** | `--compress fp16` (`model.half()`) | GPU | Modelo 2× menor; **é a técnica que deve subir FPS** — a GPU da Nano tem FP16 com throughput dobrado |
-| **INT8** | `--compress int8` (`torch.quantization.quantize_dynamic` em `Linear`/`LSTM`) | **CPU** | Modelo menor, mas **FPS menor**: a GPU da Nano (Maxwell, compute 5.3) não tem INT8 — nem o TensorRT faz INT8 nela |
-| **Pruning** | `prune_model.py` (L1 global não-estruturado) → checkpoint novo | GPU | Zera pesos mas as matrizes continuam densas: **não acelera**. Ganho = tamanho comprimido (`model_size_gz_mb`). Acurácia cai com a esparsidade |
-| **Ensemble** | `fusion.py` (fusão inter-modelos, todos os subconjuntos) | — | Acurácia sobe, **FPS cai**: modelos rodam em sequência, latência ≈ soma |
+| Técnica | Como | Onde roda | Esperado (antes de medir) | **Medido na Jetson** |
+|---|---|---|---|---|
+| **FP16** | `--compress fp16` (`model.half()`) | GPU | Modelo 2× menor; esperava-se subir o FPS (a GPU da Nano tem FP16 com throughput dobrado) | Mesma acurácia, metade do tamanho, pico de memória −25% a −50%, mas **FPS praticamente igual (−2% a +5%)** |
+| **INT8** | `--compress int8` (`torch.quantization.quantize_dynamic` em `Linear`/`LSTM`) | **CPU** | Modelo menor, FPS menor (a GPU Maxwell não tem INT8 — nem o TensorRT faz INT8 nela) | **Não executa**: `RuntimeError ... NoQEngine` — o PyTorch 1.10 da NVIDIA para Jetson não tem *backend* de operações quantizadas |
+| **Pruning** | `prune_model.py` (L1 global não-estruturado) → checkpoint novo | GPU | Não acelera (matrizes continuam densas); ganho só no tamanho comprimido | FPS igual em todas as taxas; gzip −24% (30%) a −63% (70%); acurácia −0,6 a −1,3 p.p. (30%), −8 a −9,5 p.p. (50%), colapsa (70%) |
+| **TensorRT** | `export_onnx.py` + `build_trt_engines.sh` (seção 16.7) | GPU | Deve subir o FPS (funde camadas, executa o grafo inteiro) | **SVTR +65%** (15,3 → 25,3 FPS), **CRNN −36%** (19,2 → 12,2), **PARSeq não compila** |
+| **Ensemble** | `fusion.py` (fusão inter-modelos, todos os subconjuntos) | — | Acurácia sobe, FPS cai (modelos em sequência, latência ≈ soma) | Trio: 73,43% por track a 1,19 placa/s (**estimado** pela soma das latências; não medido num pipeline único) |
 
 Implementação em [`compress.py`](compress.py). No PARSeq, a camada `head` fica fora do INT8 (o `strhub` descobre o device pelos parâmetros dela, que somem quando quantizada).
 
@@ -1023,23 +1049,31 @@ python report.py --bench logs/jetson/bench_all.csv \
 
 ### 16.6 PARSeq: resolução de entrada 32×128 × 64×256
 
-O PARSeq foi projetado pra 32×128. Retreinado em 64×256 (a mesma resolução do CRNN/SVTR), ficou **pior em acurácia** (teste no desktop: 53,3% → 45,0%) e deve ficar **bem mais lento** (4× mais patches no transformer). Os dois são comparados no artigo como resultado: resolução de entrada × acurácia × FPS.
+O PARSeq foi projetado pra 32×128. Retreinado em 64×256 (a mesma resolução do CRNN/SVTR), ficou **pior em acurácia e bem mais lento** (4× mais patches no transformer). Medido na Jetson, na mesma rodada (`logs/jetson_v3/`):
+
+| | 32×128 (legado) | 64×256 |
+|---|---|---|
+| Acurácia por imagem (NAR+1) | 53,25% | 44,79% |
+| Acurácia por track (MVCP, NAR+1) | 71,00% | 67,77% |
+| FPS NAR+1 / AR | 19,8 / 9,4 | 8,5 / 5,8 |
+| Ganho do NAR+1 sobre o AR | 2,1× | 1,5× (o codificador passa a dominar) |
+| Temperatura média (máx.) | 68°C (77,5°C) | 88°C (95,5°C — provável *throttling*) |
 
 | Run | Resolução | Flags |
 |---|---|---|
 | `bj7_parseq_legado` | 32×128 (nativa do PARSeq) | `--img-h 32 --img-w 128` |
 | `bj7_parseq` | 64×256 (igual CRNN/SVTR) | — (padrão) |
 
-Os comandos pra medir os dois na Jetson estão no roteiro da seção 16.8 (rodam junto com o TensorRT).
+Fluxo de execução na seção 16.8; resumo dos resultados na seção 16.9.
 
-### 16.7 TensorRT — a técnica que de fato sobe o FPS
+### 16.7 TensorRT — acelerou só o SVTR
 
-**Por que FP16 e pruning não subiram o FPS:** com batch 1, o gargalo não é a conta na GPU — é o PyTorch disparando centenas de operações, uma por uma, a partir da CPU fraca da Jetson. Deixar a conta mais leve não ajuda. O FP16 mostrou isso: mesma acurácia, FPS igual.
+**Por que FP16 e pruning não subiram o FPS (hipótese):** com batch 1, o gargalo provável não é a conta na GPU, e sim o PyTorch disparando centenas de operações, uma por uma, a partir da CPU fraca da Jetson — deixar a conta mais leve não ajuda. É uma hipótese sustentada indiretamente (FP16 e pruning não aceleram; TensorRT e decodificação paralela, que reduzem o número de operações, aceleram); não houve *profiling* direto. O teste de lote 1 × 5 × 16 da seção 14.7 a comprovaria.
 
 **O que o TensorRT faz:** é o otimizador oficial da NVIDIA (vem no JetPack; 8.2.1 na Jetson). Compila o modelo num "motor" pra GPU específica: funde camadas (ex: Conv+BatchNorm+ReLU numa operação só), roda o grafo inteiro de uma vez — sem o disparo operação por operação — e escolhe os kernels mais rápidos, com FP16 de verdade. Não precisa retreinar: usa os mesmos checkpoints. Na literatura, 2,1× a 6× sobre o PyTorch na Jetson Nano ([arXiv 2406.17749](https://arxiv.org/pdf/2406.17749); [NVIDIA GTC 2020](https://developer.download.nvidia.com/video/gputechconf/gtc/2020/presentations/s22676-developing-real-time-neural-networks-for-jetson.pdf): ResNet-18 30 FPS PyTorch → 91 FPS TensorRT FP16). Na Nano não há INT8 nem no TensorRT (GPU Maxwell) — só FP32 e FP16.
 
 **Fluxo:**
-1. **Desktop** — [`export_onnx.py`](export_onnx.py) converte os checkpoints pra ONNX (opset 13, o máximo do TensorRT 8.2) e valida cada um contra o PyTorch. No PARSeq, dois ajustes só na exportação (atenção "fundida" do timm desligada e `torch.triu` trocado por uma versão equivalente com operações básicas), porque essas operações não existem no opset 13; cada modo de decodificação (ar/nar/nar1) vira um ONNX separado.
+1. **Desktop** — [`export_onnx.py`](export_onnx.py) converte os checkpoints pra ONNX (opset 13, o máximo do TensorRT 8.2) e valida cada um contra o PyTorch. No PARSeq, quatro ajustes só na exportação, sem mudar o resultado: (1) atenção "fundida" do timm desligada e (2) `torch.triu` trocado por uma versão com operações básicas, porque essas operações não existem no opset 13; (3) remoção dos tensores vazios do primeiro passo da decodificação (`Concat` com `[1, 0, 192]`) e (4) troca dos `Mod` entre constantes (checagem interna do `nn.MultiheadAttention`) pelo valor pronto — o TensorRT 8.2 não aceita peso vazio nem tem `Mod`. Cada modo de decodificação (ar/nar/nar1) vira um ONNX separado.
 2. **Jetson** — [`build_trt_engines.sh`](build_trt_engines.sh) compila cada ONNX com o `trtexec` em motores FP16 e FP32 (`logs/trt/<nome>_<fp16|fp32>.engine`). Tem que ser lá: o motor é específico da GPU.
 3. **Jetson** — os `infer.py` rodam o motor com `--compress trt_fp16 --trt-engine <arquivo>` (via [`trt_runner.py`](trt_runner.py)). CSV, fusão e relatório funcionam igual. A matriz acha os motores sozinha pelo nome (`MODES="trt_fp16 trt_fp32"`).
 
@@ -1055,49 +1089,46 @@ Exportação no desktop: os 13 modelos base (CRNN, SVTR, binarizados e os 3 PARS
 Observações:
 - O motor tem **batch e resolução fixos** (batch 1, mesma resolução do ONNX).
 - `peak_gpu_mem_mb` com TensorRT soma a memória que o motor aloca por fora do PyTorch (área de trabalho + pesos), senão sairia quase zero.
-- Riscos conhecidos de conversão no TensorRT 8.2: LSTM bidirecional (CRNN) e algumas operações do decoder do PARSeq. Se algum motor falhar, a causa fica em `logs/trt/<nome>_<prec>.log` e a matriz simplesmente pula aquele modelo.
+- Se algum motor falhar, a causa fica em `logs/trt/<nome>_<prec>.log` e a matriz simplesmente pula aquele modelo.
 
-### 16.8 Roteiro da próxima rodada na Jetson (PARSeq 32×128 × 64×256 + TensorRT)
+**Resultado na Jetson (TensorRT 8.2.1, `logs/jetson_v3/`):**
 
-**1. Desktop** — exportar os ONNX (se ainda não exportou) e commit + push do código:
+| Modelo | PyTorch FP32 | TensorRT FP32 | TensorRT FP16 | Acurácia |
+|---|---|---|---|---|
+| SVTR | 15,3 FPS | 24,4 FPS | **25,3 FPS (+65%)** | idêntica (51,67%) |
+| CRNN | 19,2 FPS | 10,8 FPS | 12,2 FPS (−36%) | idêntica (50,71%) |
+| PARSeq | 19,6 FPS (NAR+1) | não compila | não compila | — |
+
+- **SVTR:** energia por imagem 32% menor (0,40 J). Os motores ocupam mais disco (29 MB contra 14 MB do modelo) e mais memória de GPU (48,7 contra 31,4 MB), porque guardam os *kernels* escolhidos.
+- **CRNN:** mais lento. Hipótese: o TensorRT 8.2 executa a LSTM bidirecional como um laço passo a passo, enquanto o PyTorch usa a implementação otimizada do cuDNN. Não é clock baixo — os motores foram recompilados com `jetson_clocks` e deram o mesmo resultado.
+- **PARSeq:** mesmo com os 4 ajustes, o modo AR falha no parser (`/ArgMax: at least 2 dimensions are required for input`) e os modos NAR/NAR+1 dão *segmentation fault* dentro do otimizador de transformers do TensorRT (`ForeignNode`), em FP32 e FP16. O mesmo ONNX compila no TensorRT 11 do desktop, mas essa versão não existe pra Jetson Nano (JetPack 4.6 é o último). Logs em `logs/trt/bj7_parseq*_fp*.log`.
+- Fusão com os modelos em TensorRT: mesma acurácia do PyTorch (ensemble 73,30–73,37% contra 73,43%).
+
+### 16.8 Fluxo de execução TensorRT + matriz na Jetson
+
+> Executado em 24–25/10/2026 (rodada `logs/jetson_v3/`). Passos reutilizáveis para uma nova rodada; a renomeação do PARSeq legado (`bj7_parseq` → `bj7_parseq_legado`) já foi feita na Jetson e não precisa ser repetida.
+
+**1. Desktop** — exportar os ONNX e subir o código:
 
 ```bash
 python export_onnx.py --all
-git add -A && git commit -m "TensorRT + PARSeq em duas resolucoes" && git push
+git push
+export JETSON_HOST=pedrobastos@100.72.163.58
+./sync_jetson.sh onnx                   # os 13 ONNX (~300MB)
+./sync_jetson.sh ckpt <runs novos>      # só se algum checkpoint mudou
 ```
 
-**2. Jetson** — atualizar o código e renomear o PARSeq legado (lá ele ainda está em `logs/bj7_parseq/` com o nome antigo). O `mv` da `jetson_v2` é porque ela foi commitada a partir do desktop e existe solta na Jetson — sem isso o `git pull` recusa sobrescrever. **Fazer este passo antes do 3**: o 3 manda o PARSeq novo pra `logs/bj7_parseq/` e sobrescreveria o legado.
+**2. Jetson** — atualizar o código e compilar os motores (não rodar benchmark ao mesmo tempo; motores já existentes são pulados — pra recompilar, apagar o `.engine`):
 
 ```bash
 cd /mnt/ssd/projeto-tcc2/tcc-placa-ocr
-mv logs/jetson_v2 logs/jetson_v2_backup
 git pull
-mkdir -p logs/bj7_parseq_legado
-mv logs/bj7_parseq/bj7_parseq_best.pt logs/bj7_parseq_legado/bj7_parseq_legado_best.pt
-for a in 30 50 70; do mkdir -p logs/bj7_parseq_legado_prune$a && mv logs/bj7_parseq_prune$a/bj7_parseq_prune${a}_best.pt logs/bj7_parseq_legado_prune$a/bj7_parseq_legado_prune${a}_best.pt && rmdir logs/bj7_parseq_prune$a; done
-```
-
-(Se o legado já tiver sido sobrescrito lá, mandar do desktop: `./sync_jetson.sh ckpt bj7_parseq_legado bj7_parseq_legado_prune30 bj7_parseq_legado_prune50 bj7_parseq_legado_prune70`.)
-
-**3. Desktop (Git Bash)** — mandar o PARSeq novo e os ONNX:
-
-```bash
-export JETSON_HOST=pedrobastos@100.72.163.58
-./sync_jetson.sh ckpt bj7_parseq        # PARSeq novo, 64x256
-./sync_jetson.sh onnx                   # os 13 ONNX (~320MB)
-```
-
-**4. Jetson** — compilar os motores TensorRT (26 compilações: 13 ONNX × FP16/FP32; pode levar algumas horas — pra ir mais rápido, `PRECISIONS="fp16"`). Não rodar benchmark ao mesmo tempo:
-
-```bash
 mkdir -p logs/trt
 nohup bash build_trt_engines.sh > logs/trt/build.log 2>&1 &
-tail -f logs/trt/build.log      # cada linha OK já mostra uma prévia do throughput
+grep -E "OK|FALHOU|Fim" logs/trt/build.log     # acompanhar
 ```
 
-Conferir quais motores saíram: `ls logs/trt/*.engine` (e `grep -A5 FALHOU logs/trt/build.log` pros que falharam).
-
-**5. Jetson** — quando o build terminar, a matriz: os dois PARSeq em PyTorch (none/fp16) + todos os modelos base em TensorRT:
+**3. Jetson** — clock e ventoinha no máximo, depois a matriz (exemplo: os dois PARSeq em PyTorch + todos os modelos base em TensorRT). Com `nohup`, o desktop pode ser desligado:
 
 ```bash
 sudo jetson_clocks
@@ -1109,26 +1140,60 @@ nohup bash -c '
   ONLY="bj7_parseq bj7_parseq_legado" MODES="none fp16" bash run_bench_matrix.sh
   MODES="trt_fp16 trt_fp32" bash run_bench_matrix.sh
 ' > logs/jetson_v3/matrix.log 2>&1 &
+tail -f logs/jetson_v3/matrix.log    # no fim: ok=… falhas=… pulados=… (pulados = sem motor/já feito)
 ```
 
-Acompanhar: `tail -f logs/jetson_v3/matrix.log`. No fim ele imprime `ok=… falhas=… pulados=…` (pulados = motor que não existe).
+A matriz pula runs cujo `preds_*.csv` já existe (`SKIP_DONE=1`, padrão) — pra refazer um run, apague o CSV dele.
 
-**6. Desktop** — trazer os resultados, fundir e gerar o relatório (exemplo com TensorRT FP16; trocar o sufixo pra `trt_fp32`, ou `none_nar1` com `parseq_legado` etc.):
+**4. Jetson → git** — subir só os resultados (os `.engine` são ignorados pelo `.gitignore`; os `.log` da compilação entram como evidência):
 
 ```bash
-mkdir -p logs/jetson_v3
-scp "pedrobastos@100.72.163.58:/mnt/ssd/projeto-tcc2/tcc-placa-ocr/logs/jetson_v3/*" logs/jetson_v3/
-
-python fusion.py --preds \
-    crnn=logs/jetson_v3/preds_bj7_crnn_trt_fp16.csv \
-    svtr=logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv \
-    parseq=logs/jetson_v3/preds_bj7_parseq_legado_trt_fp16_nar1.csv \
-    --out logs/jetson_v3/fusion_trt_fp16.txt --out-csv logs/jetson_v3/fusion_trt_fp16.csv
-
-python report.py --bench logs/jetson_v3/bench_all.csv \
-    --fusion logs/jetson_v3/fusion_trt_fp16.csv \
-    --out-csv logs/jetson_v3/report.csv
+git add logs/jetson_v3 logs/trt
+git commit -m "Resultados Jetson" && git push
 ```
+
+**5. Desktop** — `git pull` e fusão (o PARSeq entra em PyTorch, porque não compila no TensorRT 8.2):
+
+```bash
+python fusion.py --preds \
+    crnn=logs/jetson_v2/preds_bj7_crnn_none.csv \
+    svtr=logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv \
+    parseq=logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv \
+    --out logs/jetson_v3/fusion_rapido.txt --out-csv logs/jetson_v3/fusion_rapido.csv
+```
+
+### 16.9 Resultados finais (Jetson Nano)
+
+Teste completo (3 000 tracks, 15 000 imagens LR), batch 1, MAXN + `jetson_clocks` + ventoinha 255 + espera até 55°C antes de cada run. Acurácia por track = fusão MVCP das 5 imagens LR. No ensemble, o FPS é **estimado** pela soma das latências dos modelos (medidos separadamente).
+
+| Configuração | Acurácia por track | FPS | Placas/s |
+|---|---|---|---|
+| PARSeq AR | 70,43% | 9,5 | 1,90 |
+| PARSeq NAR+1 | 71,00% | 19,6 | 3,92 |
+| SVTR TensorRT FP16 | 69,37% | 25,3 | **5,06** |
+| Ensemble (CRNN + SVTR + PARSeq AR) | 73,23% | 4,5 | 0,90 |
+| Ensemble (CRNN + SVTR + PARSeq NAR+1) | **73,43%** | 5,9 | 1,19 |
+| Ensemble (CRNN + SVTR TensorRT + PARSeq NAR+1) | 73,37% | 7,0 | 1,40 |
+| SVTR TensorRT + PARSeq NAR+1 | 72,80% | 11,0 | 2,21 |
+
+Outros resultados:
+- **Desktop × Jetson:** acurácia por imagem idêntica (CRNN 50,71%, SVTR 51,67–51,68%, PARSeq 53,31%); ensemble com PARSeq AR = **73,23% nas duas**.
+- **Fusão intra-modelo:** +16,2 a +17,8 p.p. sobre a imagem isolada; MVCP supera MV em 2,5 a 3,1 p.p.
+- **Refrigeração:** sem ela (v1, ~95°C), CRNN 15,2 FPS; com ela (v2), 19,2 FPS (+26%), mesma acurácia.
+- **Binarização (Otsu):** acurácia por imagem cai pra ~25% (PARSeq 21%); ensemble 45,57% contra 73,43% em cor; sem ganho de FPS. Descartada.
+- **Reprodutibilidade:** o PARSeq legado repetido na v3 deu acurácia idêntica à v2 e FPS a menos de 1%.
+- **Compressão, pruning, TensorRT e resolução do PARSeq:** tabelas nas seções 16.1, 16.6 e 16.7.
+
+**Onde está cada resultado** (`bench_all.csv` = 1 linha por run; `preds_*.csv` = predições por imagem; `fusion_*.txt` = tabelas de fusão):
+
+| Pasta | Rodada | Usar para |
+|---|---|---|
+| `logs/jetson/` | v1 — ventoinha automática (~95°C, *throttling*) | só **pruning** e a falha do **INT8** (acurácia independe da temperatura; FPS não é comparável) |
+| `logs/jetson_v2/` | v2 — refrigerada | baseline, FP16, fusão, ensemble, binarização (`fusion_cor*.txt`, `fusion_bin.txt`, `report.csv`) |
+| `logs/jetson_v3/` | v3 — refrigerada | TensorRT, PARSeq 32×128 × 64×256 (`fusion_trt_fp16`, `fusion_rapido`, `fusion_parseq_res`, `fusion_bin_trt`) |
+| `logs/trt/` | build dos motores | `.log` do `trtexec` (inclui as falhas do PARSeq) |
+
+> **Atenção à nomenclatura:** em `logs/jetson/` e `logs/jetson_v2/`, o run `bj7_parseq` é o **legado 32×128** (a renomeação veio depois). Em `logs/jetson_v3/`, `bj7_parseq` é o 64×256 e `bj7_parseq_legado` é o 32×128.
 
 ---
 
@@ -1136,4 +1201,4 @@ python report.py --bench logs/jetson_v3/bench_all.csv \
 
 1. Shi, B., et al. (2015). *An End-to-End Trainable Neural Network for Image-based Sequence Recognition.* IEEE TPAMI.
 2. Du, Y., et al. (2022). *SVTR: Scene Text Recognition with a Single Visual Model.* IJCAI.
-3. Bautista, D. & Atienza, R. (2022). *Scene Text Recognition with Permuted Autoregression.* CVPR (PARSeq).
+3. Bautista, D. & Atienza, R. (2022). *Scene Text Recognition with Permuted Autoregressive Sequence Models.* ECCV (PARSeq).

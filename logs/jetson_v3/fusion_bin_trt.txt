@@ -1,0 +1,25 @@
+================================================================================
+BJ7 - Fusao por track (voto ponderado por confianca)
+================================================================================
+
+== MV (Voto Majoritario por sequencia, peso = conf_seq) ==
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+crnn     |   0.0000  |   0.3710  |  3000
+svtr     |   0.0000  |   0.4010  |  3000
+
+Ensemble / fusao inter-modelos (1 voto MV por modelo, peso = soma de conf_seq):
+  crnn+svtr            acuracia por track: 0.4130 (3000 tracks em comum)
+
+== MVCP (Voto Majoritario por Caractere/Posicao, peso = conf_chars[pos]) ==
+
+Modelo   | HR fusion | LR fusion | Tracks
+---------|-----------|-----------|-------
+crnn     |   0.0000  |   0.4073  |  3000
+svtr     |   0.0000  |   0.4443  |  3000
+
+Ensemble / fusao inter-modelos (1 voto MVCP por modelo, peso = soma de conf_chars vencedores):
+  crnn+svtr            acuracia por track: 0.4410 (3000 tracks em comum)
+
+================================================================================

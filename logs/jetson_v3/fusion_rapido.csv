@@ -1,0 +1,8 @@
+config,kind,members,preds_csvs,mv_acc,mvcp_acc,n_tracks
+crnn,intra,crnn,logs/jetson_v2/preds_bj7_crnn_none.csv,0.6430,0.6693,3000
+svtr,intra,svtr,logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv,0.6637,0.6937,3000
+parseq,intra,parseq,logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv,0.6847,0.7100,3000
+crnn+svtr,ensemble,crnn;svtr,logs/jetson_v2/preds_bj7_crnn_none.csv;logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv,0.6827,0.7017,3000
+crnn+parseq,ensemble,crnn;parseq,logs/jetson_v2/preds_bj7_crnn_none.csv;logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv,0.6933,0.7143,3000
+svtr+parseq,ensemble,svtr;parseq,logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv;logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv,0.7080,0.7280,3000
+crnn+svtr+parseq,ensemble,crnn;svtr;parseq,logs/jetson_v2/preds_bj7_crnn_none.csv;logs/jetson_v3/preds_bj7_svtr_trt_fp16.csv;logs/jetson_v3/preds_bj7_parseq_legado_none_nar1.csv,0.7180,0.7337,3000

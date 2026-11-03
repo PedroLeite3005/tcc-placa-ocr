@@ -1,0 +1,4 @@
+config,kind,members,preds_csvs,mv_acc,mvcp_acc,n_tracks
+crnn,intra,crnn,logs/jetson_v3/preds_bj7_crnn_bin_trt_fp16.csv,0.3710,0.4073,3000
+svtr,intra,svtr,logs/jetson_v3/preds_bj7_svtr_bin_trt_fp16.csv,0.4010,0.4443,3000
+crnn+svtr,ensemble,crnn;svtr,logs/jetson_v3/preds_bj7_crnn_bin_trt_fp16.csv;logs/jetson_v3/preds_bj7_svtr_bin_trt_fp16.csv,0.4130,0.4410,3000
